@@ -29,18 +29,18 @@ insert into lookups (category, code, label, sort_order) values
   ('symptom_type','other',        'Other',                8)
 on conflict (category, code) do nothing;
 
--- ⚠️ A6 — replace with REAL member emails before first deploy (must match the Google/email
--- address each person signs in with; matched case-insensitively).
+-- A6 — real member emails (matched case-insensitively at login).
 insert into app_users (email, display_name) values
-  ('rio@example.com',  'Rio'),
-  ('wife@example.com', 'Wife')
+  ('viriyatjoa@gmail.com',  'Rio'),
+  ('sinamoroll08@gmail.com', 'Wife')
 on conflict (email) do nothing;
 
--- ⚠️ A5 — replace with REAL cat data (Simba + the other two: sex, birth_date, neuter, weight).
+-- A5 — real cats. Sex / birth date / neutered unknown at seed time — fill in
+-- from /settings after first login.
 insert into cats (name, sex, neutered, birth_date, accent_index) values
-  ('Simba', null, false, null, 1),
-  ('Cat 2', null, false, null, 2),
-  ('Cat 3', null, false, null, 3)
+  ('Enoki',  null, false, null, 1),
+  ('Cheeto', null, false, null, 2),
+  ('Tudou',  null, false, null, 3)
 on conflict do nothing;
 
 -- Example foods — ⚠️ VERIFY kcal from actual labels before trusting the math.
