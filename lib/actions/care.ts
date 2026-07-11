@@ -91,11 +91,20 @@ export async function completeCareEvent(
   if (fetchErr) throw new Error(fetchErr.message);
   const e = event as CareEvent;
 
-  const { error } = await database
+  // Guard against double-completion (two phones tapping the same chip): only
+  // transition rows that are still open, and only chain if WE closed it.
+  const { data: closed, error } = await database
     .from("care_events")
     .update({ done_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .is("done_at", null)
+    .select("id");
   if (error) throw new Error(error.message);
+  if (!closed || closed.length === 0) {
+    // Someone else already completed it — no-op, don't fork the chain.
+    revalidate();
+    return { nextDueDate: null };
+  }
 
   let next: string | null = null;
   if (e.interval_days != null) {

@@ -123,7 +123,7 @@ export async function applyMealTemplate(input: {
     unit_label?: string | null;
     notes?: string | null;
   }[];
-}): Promise<{ count: number }> {
+}): Promise<{ count: number; treatWarningCats: string[] }> {
   const me = await getCurrentAppUser();
   if (!me) throw new Error("Unauthorized");
 
@@ -135,12 +135,15 @@ export async function applyMealTemplate(input: {
   const foodIds = Array.from(new Set(rows.map((r) => r.food_id)));
   const { data: foods, error: foodErr } = await database
     .from("food_catalog")
-    .select("id, kcal_per_100g")
+    .select("id, kcal_per_100g, food_type_id")
     .in("id", foodIds);
   if (foodErr) throw new Error(foodErr.message);
 
   const kcalMap = new Map(
     (foods ?? []).map((f) => [f.id as string, Number(f.kcal_per_100g)]),
+  );
+  const typeMap = new Map(
+    (foods ?? []).map((f) => [f.id as string, f.food_type_id as string]),
   );
 
   const inserts = rows.map((r) => {
@@ -166,6 +169,45 @@ export async function applyMealTemplate(input: {
   const { error } = await database.from("feeding_logs").insert(inserts);
   if (error) throw new Error(error.message);
 
+  // Treat rule on the feed-all path too (SPEC §6.1): warn per cat whose snack
+  // kcal now exceeds 10% of target. Same one-`if` logic as logFeed.
+  const treatWarningCats: string[] = [];
+  const foodTypes = await getLookupsByCategory("food_type");
+  const snackId = foodTypes.find((l) => l.code === "snack")?.id ?? null;
+  const snackCatIds = snackId
+    ? Array.from(
+        new Set(
+          rows.filter((r) => typeMap.get(r.food_id) === snackId).map((r) => r.cat_id),
+        ),
+      )
+    : [];
+  if (snackCatIds.length > 0) {
+    const [catsRes, weightsRes, byCat] = await Promise.all([
+      database
+        .from("cats")
+        .select("id, name, daily_kcal_override, neutered")
+        .in("id", snackCatIds),
+      database
+        .from("weight_logs")
+        .select("cat_id, weight_grams, measured_at")
+        .in("cat_id", snackCatIds)
+        .eq("is_active", true)
+        .order("measured_at", { ascending: false }),
+      getTodayKcalByCat(),
+    ]);
+    const latestWeightByCat = new Map<string, number>();
+    for (const w of weightsRes.data ?? []) {
+      if (!latestWeightByCat.has(w.cat_id)) {
+        latestWeightByCat.set(w.cat_id, w.weight_grams);
+      }
+    }
+    for (const cat of catsRes.data ?? []) {
+      const target = dailyTarget(cat, latestWeightByCat.get(cat.id) ?? null);
+      const snackKcal = byCat.get(cat.id)?.snackKcal ?? 0;
+      if (exceedsTreatLimit(snackKcal, target)) treatWarningCats.push(cat.name);
+    }
+  }
+
   revalidatePath("/", "layout");
-  return { count: inserts.length };
+  return { count: inserts.length, treatWarningCats };
 }

@@ -66,7 +66,7 @@ export default async function CarePage() {
   ]);
 
   const cats = (catsRes.data ?? []) as Cat[];
-  const { overdue, today, upcoming } = bucketCareEvents(events);
+  const { overdue, today, upcoming, anytime } = bucketCareEvents(events);
 
   // Group the (already date-sorted) upcoming events by due_date.
   const upcomingGroups: { date: string; events: CareEventWithCat[] }[] = [];
@@ -78,7 +78,10 @@ export default async function CarePage() {
   }
 
   const nothingOpen =
-    overdue.length === 0 && today.length === 0 && upcoming.length === 0;
+    overdue.length === 0 &&
+    today.length === 0 &&
+    upcoming.length === 0 &&
+    anytime.length === 0;
 
   return (
     <div className="space-y-5">
@@ -122,6 +125,17 @@ export default async function CarePage() {
           </h2>
           <ul className="space-y-2">
             {today.map((e) => (
+              <CareRow key={e.id} event={e} typeLabels={typeLabels} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {anytime.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold text-foreground">Anytime</h2>
+          <ul className="space-y-2">
+            {anytime.map((e) => (
               <CareRow key={e.id} event={e} typeLabels={typeLabels} />
             ))}
           </ul>

@@ -24,6 +24,8 @@ export type CareBuckets = {
   overdue: CareEvent[];
   today: CareEvent[];
   upcoming: CareEvent[];
+  /** Open events with no due date — "anytime". Shown on /care so they stay completable. */
+  anytime: CareEvent[];
 };
 
 /** Sort key: due_time nulls last (SPEC §6.2). */
@@ -37,7 +39,7 @@ function byDueTime(a: CareEvent, b: CareEvent): number {
 export function bucketCareEvents<T extends CareEvent>(
   events: T[],
   today = todayInTz(),
-): { overdue: T[]; today: T[]; upcoming: T[] } {
+): { overdue: T[]; today: T[]; upcoming: T[]; anytime: T[] } {
   const open = events.filter(isOpen);
   return {
     overdue: open
@@ -49,6 +51,7 @@ export function bucketCareEvents<T extends CareEvent>(
       .sort((a, b) =>
         a.due_date! === b.due_date! ? byDueTime(a, b) : a.due_date! < b.due_date! ? -1 : 1,
       ),
+    anytime: open.filter((e) => e.due_date == null),
   };
 }
 

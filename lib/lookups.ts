@@ -25,10 +25,17 @@ export const getLookupsByCategory = cache(
   },
 );
 
-/** id → Lookup map for label snapshots / rendering. */
+/**
+ * id → Lookup map for rendering labels on EXISTING records. Includes inactive
+ * rows on purpose: deactivating a lookup hides it from dropdowns (which use
+ * the active-only helpers above) but must not erase labels from history.
+ */
 export const getLookupMap = cache(async (): Promise<Map<string, Lookup>> => {
-  const all = await getAllLookups();
-  return new Map(all.map((l) => [l.id, l]));
+  const { data, error } = await db()
+    .from("lookups")
+    .select("id, category, code, label, sort_order, is_active");
+  if (error) throw error;
+  return new Map(((data ?? []) as Lookup[]).map((l) => [l.id, l]));
 });
 
 /** Distinct categories present (for the /admin/lists category picker). */

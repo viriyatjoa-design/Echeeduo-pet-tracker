@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { getLookupsByCategory } from "@/lib/lookups";
+import { getLookupMap } from "@/lib/lookups";
 import type { CareEvent, Cat, UUID } from "@/lib/types";
 
 /**
@@ -60,6 +60,12 @@ export async function getOpenCareByCat(): Promise<Map<UUID, CareEvent[]>> {
 
 /** lookup id → label for the 'care_event_type' category (for rendering rows). */
 export async function getCareTypeLabels(): Promise<Map<UUID, string>> {
-  const types = await getLookupsByCategory("care_event_type");
-  return new Map(types.map((l) => [l.id, l.label]));
+  // Rendering map — includes inactive types so deactivating a care type
+  // never blanks labels on existing events.
+  const all = await getLookupMap();
+  return new Map(
+    [...all.values()]
+      .filter((l) => l.category === "care_event_type")
+      .map((l) => [l.id, l.label]),
+  );
 }

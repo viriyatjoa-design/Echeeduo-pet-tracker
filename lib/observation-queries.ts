@@ -76,17 +76,20 @@ export async function getJournalEntries(
         .from("litter_logs")
         .select("*")
         .eq("is_active", true)
-        .order("observed_at", { ascending: false }),
+        .order("observed_at", { ascending: false })
+        .limit(200),
       database
         .from("symptom_logs")
         .select("*")
         .eq("is_active", true)
-        .order("noted_at", { ascending: false }),
+        .order("noted_at", { ascending: false })
+        .limit(200),
       database
         .from("water_logs")
         .select("*")
         .eq("is_active", true)
-        .order("logged_at", { ascending: false }),
+        .order("logged_at", { ascending: false })
+        .limit(200),
       getLookupMap(),
       database.from("app_users").select("id, display_name"),
     ]);
@@ -250,13 +253,15 @@ export async function getCatHealth(catId: UUID): Promise<CatHealth> {
       .select("*")
       .eq("is_active", true)
       .eq("cat_id", catId)
-      .order("noted_at", { ascending: false }),
+      .order("noted_at", { ascending: false })
+      .limit(200),
     database
       .from("litter_logs")
       .select("*")
       .eq("is_active", true)
       .eq("cat_id", catId)
-      .order("observed_at", { ascending: false }),
+      .order("observed_at", { ascending: false })
+      .limit(200),
     database
       .from("water_logs")
       .select("ml, logged_at")

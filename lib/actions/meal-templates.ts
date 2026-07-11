@@ -133,6 +133,21 @@ export async function upsertTemplateItem(input: TemplateItemInput) {
   };
 
   const database = db();
+
+  // One item per cat per template (SPEC §6.4) — the feed-all review keys rows
+  // by cat, so duplicates would collide there.
+  let dupQuery = database
+    .from("meal_template_items")
+    .select("id")
+    .eq("template_id", input.template_id)
+    .eq("cat_id", input.cat_id)
+    .eq("is_active", true);
+  if (input.id) dupQuery = dupQuery.neq("id", input.id);
+  const { data: dup, error: dupErr } = await dupQuery.limit(1);
+  if (dupErr) throw new Error(dupErr.message);
+  if (dup && dup.length > 0) {
+    throw new Error("That cat already has an item on this template — edit it instead.");
+  }
   if (input.id) {
     const { error } = await database
       .from("meal_template_items")

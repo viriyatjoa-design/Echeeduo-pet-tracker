@@ -1,6 +1,9 @@
 // Time helpers. Store UTC (timestamptz); display Asia/Jakarta (SPEC §2.9). Native Intl only.
 
-export const APP_TZ = process.env.APP_TZ || "Asia/Jakarta";
+// Fixed app timezone (SPEC §2.9). Hardcoded — not read from env — because this
+// module is bundled into client components too, where non-NEXT_PUBLIC env vars
+// are undefined; an env read would silently make server and client disagree.
+export const APP_TZ = "Asia/Jakarta";
 
 /** 'YYYY-MM-DD' for "today" in the app timezone. */
 export function todayInTz(tz: string = APP_TZ): string {

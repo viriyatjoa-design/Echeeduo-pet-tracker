@@ -13,7 +13,11 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") || "/";
+  // Only allow same-origin path redirects — reject absolute/protocol-relative
+  // values so `next` can't be abused as an open redirect.
+  const rawNext = searchParams.get("next") || "/";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   const supabase = await createSupabaseServerClient();
 
