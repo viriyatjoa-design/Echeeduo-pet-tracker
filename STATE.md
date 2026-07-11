@@ -30,6 +30,6 @@ Wave 2 (done, build green):
 - [x] `/admin/lists` linked from Settings
 - [x] PWA manifest + icons (sharp-generated, maskable + apple-touch)
 - [x] `npm run build` + `tsc --noEmit` green (13 routes)
-- [~] Ultracode audit vs SPEC §9 DoD (workflow running)
+- [x] Ultracode audit vs SPEC §9 DoD — 16 agents, 11 confirmed findings, all fixed (incl. open-redirect, double-completion race, invisible anytime events)
 - [x] `SETUP.md` owner runbook
 - [x] Commit + push (continuous)
