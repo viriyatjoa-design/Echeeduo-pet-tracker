@@ -44,6 +44,32 @@ export const getLatestWeight = cache(
 );
 
 /**
+ * All active weight logs grouped per cat, for the dashboard trend (one query,
+ * folded into a Map<catId, WeightLog[]>). Rows come back newest-first, so each
+ * cat's list is newest-first too. The first entry per cat is its latest weight.
+ * Cats with no logs are absent from the map.
+ */
+export const getWeightLogsByCat = cache(
+  async (): Promise<Map<UUID, WeightLog[]>> => {
+    const { data, error } = await db()
+      .from("weight_logs")
+      .select(COLS)
+      .eq("is_active", true)
+      .order("measured_at", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const map = new Map<UUID, WeightLog[]>();
+    for (const row of (data ?? []) as WeightLog[]) {
+      const list = map.get(row.cat_id);
+      if (list) list.push(row);
+      else map.set(row.cat_id, [row]);
+    }
+    return map;
+  },
+);
+
+/**
  * Latest active weight per cat, for the dashboard (one query, folded into a
  * Map<catId, WeightLog>). Rows come back newest-first, so the first row seen
  * for each cat wins.

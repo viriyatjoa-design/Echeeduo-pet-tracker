@@ -170,6 +170,34 @@ export async function getRecentFoodsForCat(
   return dedupeFoodIds(data ?? [], limit);
 }
 
+/**
+ * Per-cat MRU food ids in ONE query (dashboard): the household's last 300
+ * feeding logs, deduped per cat, most-recent-first, capped at `limit` per cat.
+ * Cats with no recent feeds are absent from the map.
+ */
+export async function getRecentFoodIdsByCat(
+  limit = 8,
+): Promise<Map<string, string[]>> {
+  const { data } = await db()
+    .from("feeding_logs")
+    .select("cat_id, food_id, fed_at")
+    .eq("is_active", true)
+    .order("fed_at", { ascending: false })
+    .limit(300);
+
+  const out = new Map<string, string[]>();
+  for (const r of data ?? []) {
+    let list = out.get(r.cat_id);
+    if (!list) {
+      list = [];
+      out.set(r.cat_id, list);
+    }
+    if (list.length >= limit || list.includes(r.food_id)) continue;
+    list.push(r.food_id);
+  }
+  return out;
+}
+
 function dedupeFoodIds(
   rows: { food_id: string }[],
   limit: number,
@@ -187,10 +215,30 @@ function dedupeFoodIds(
 
 // ── 7-day kcal series (dashboard sparkline) ───────────────────────────────────
 
+/** 'YYYY-MM-DD' of 6 Jakarta days ago — the start of the 7-day window. */
+function sevenDayStartDate(): string {
+  return addDaysToDate(todayInTz(), -6);
+}
+
+/** Zero-filled buckets for the 7 Jakarta days starting at startDate. */
+function empty7DayBuckets(startDate: string): Map<string, number> {
+  const buckets = new Map<string, number>();
+  for (let i = 0; i < 7; i++) buckets.set(addDaysToDate(startDate, i), 0);
+  return buckets;
+}
+
+function bucketsToSeries(buckets: Map<string, number>): KcalPoint[] {
+  return Array.from(buckets, ([date, kcal]) => ({ date, kcal }));
+}
+
+/** Zero-filled 7-day series — fallback for cats with no feeds in the window. */
+export function empty7DayKcalSeries(): KcalPoint[] {
+  return bucketsToSeries(empty7DayBuckets(sevenDayStartDate()));
+}
+
 /** Last 7 Jakarta days (oldest → today), 0-filled, for a cat. */
 export async function get7DayKcalSeries(cat_id: string): Promise<KcalPoint[]> {
-  const today = todayInTz();
-  const startDate = addDaysToDate(today, -6);
+  const startDate = sevenDayStartDate();
   const start = startOfDayUtc(startDate);
 
   const { data } = await db()
@@ -200,17 +248,51 @@ export async function get7DayKcalSeries(cat_id: string): Promise<KcalPoint[]> {
     .eq("is_active", true)
     .gte("fed_at", start);
 
-  const buckets = new Map<string, number>();
-  for (let i = 0; i < 7; i++) buckets.set(addDaysToDate(startDate, i), 0);
-
+  const buckets = empty7DayBuckets(startDate);
   for (const log of data ?? []) {
     const day = tzDay(log.fed_at);
     if (buckets.has(day)) {
       buckets.set(day, round1(buckets.get(day)! + Number(log.kcal)));
     }
   }
+  return bucketsToSeries(buckets);
+}
 
-  return Array.from(buckets, ([date, kcal]) => ({ date, kcal }));
+/**
+ * Last-7-Jakarta-day kcal series for EVERY cat in ONE feeding_logs query
+ * (dashboard). Cats with no feeds in the window are absent from the map —
+ * callers should fall back to `empty7DayKcalSeries()`.
+ */
+export async function get7DayKcalSeriesByCat(): Promise<
+  Map<string, KcalPoint[]>
+> {
+  const startDate = sevenDayStartDate();
+  const start = startOfDayUtc(startDate);
+
+  const { data } = await db()
+    .from("feeding_logs")
+    .select("cat_id, kcal, fed_at")
+    .eq("is_active", true)
+    .gte("fed_at", start);
+
+  const bucketsByCat = new Map<string, Map<string, number>>();
+  for (const log of data ?? []) {
+    let buckets = bucketsByCat.get(log.cat_id);
+    if (!buckets) {
+      buckets = empty7DayBuckets(startDate);
+      bucketsByCat.set(log.cat_id, buckets);
+    }
+    const day = tzDay(log.fed_at);
+    if (buckets.has(day)) {
+      buckets.set(day, round1(buckets.get(day)! + Number(log.kcal)));
+    }
+  }
+
+  const out = new Map<string, KcalPoint[]>();
+  for (const [catId, buckets] of bucketsByCat) {
+    out.set(catId, bucketsToSeries(buckets));
+  }
+  return out;
 }
 
 // ── Cat feeding history (profile + <FeedingHistory>) ──────────────────────────

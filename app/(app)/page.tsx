@@ -6,11 +6,12 @@ import { strings } from "@/lib/strings";
 import { getLookupsByCategory } from "@/lib/lookups";
 import {
   getTodayKcalByCat,
-  get7DayKcalSeries,
+  get7DayKcalSeriesByCat,
+  empty7DayKcalSeries,
   getMRUFoodIds,
-  getRecentFoodsForCat,
+  getRecentFoodIdsByCat,
 } from "@/lib/feeding-queries";
-import { getLatestWeightByCat, getWeightLogs } from "@/lib/weight-queries";
+import { getWeightLogsByCat } from "@/lib/weight-queries";
 import { getTodayWaterByCat } from "@/lib/observation-queries";
 import { getOpenCareByCat, getCareTypeLabels } from "@/lib/care-queries";
 import { dailyTarget, exceedsTreatLimit } from "@/lib/kcal";
@@ -40,7 +41,9 @@ export default async function TodayPage() {
     foodUnits,
     mruFoodIds,
     todayKcal,
-    latestWeightByCat,
+    seriesByCat,
+    recentFoodsByCat,
+    weightLogsByCat,
     waterByCat,
     openCareByCat,
     careTypeLabels,
@@ -58,7 +61,9 @@ export default async function TodayPage() {
     getLookupsByCategory("food_unit"),
     getMRUFoodIds(8),
     getTodayKcalByCat(),
-    getLatestWeightByCat(),
+    get7DayKcalSeriesByCat(),
+    getRecentFoodIdsByCat(8),
+    getWeightLogsByCat(),
     getTodayWaterByCat(),
     getOpenCareByCat(),
     getCareTypeLabels(),
@@ -82,17 +87,11 @@ export default async function TodayPage() {
   const templates = (templatesRes.data ?? []) as MealTemplate[];
   const templateItems = (templateItemsRes.data ?? []) as MealTemplateItem[];
 
-  // Per-cat feeding series + weight logs (each cat's own trend).
-  const [seriesByCat, weightLogsByCat, recentEntries] = await Promise.all([
-    Promise.all(cats.map((c) => get7DayKcalSeries(c.id))),
-    Promise.all(cats.map((c) => getWeightLogs(c.id))),
-    Promise.all(
-      cats.map(
-        async (c) => [c.id, await getRecentFoodsForCat(c.id, 8)] as const,
-      ),
-    ),
-  ]);
-  const recentByCat = Object.fromEntries(recentEntries);
+  // Pure in-memory assembly from the batched maps above — no more queries.
+  const emptySeries = empty7DayKcalSeries();
+  const recentByCat = Object.fromEntries(
+    cats.map((c) => [c.id, recentFoodsByCat.get(c.id) ?? []]),
+  );
 
   const feedData = {
     cats,
@@ -154,9 +153,10 @@ export default async function TodayPage() {
       {header}
 
       <div className="space-y-4">
-        {cats.map((cat, i) => {
+        {cats.map((cat) => {
           const totals = todayKcal.get(cat.id);
-          const latestWeight = latestWeightByCat.get(cat.id) ?? null;
+          const weightLogs = weightLogsByCat.get(cat.id) ?? [];
+          const latestWeight = weightLogs[0] ?? null;
           const target = dailyTarget(cat, latestWeight?.weight_grams ?? null);
           const snackKcal = totals?.snackKcal ?? 0;
 
@@ -167,10 +167,10 @@ export default async function TodayPage() {
               kcal={totals?.kcal ?? 0}
               target={target}
               treat={exceedsTreatLimit(snackKcal, target)}
-              series={seriesByCat[i]}
+              series={seriesByCat.get(cat.id) ?? emptySeries}
               lastFed={totals?.lastFed ?? null}
               latestWeight={latestWeight}
-              trend={weightTrend(weightLogsByCat[i])}
+              trend={weightTrend(weightLogs)}
               waterMl={waterByCat.get(cat.id) ?? 0}
               careEvents={openCareByCat.get(cat.id) ?? []}
               careTypeLabels={careTypeLabels}

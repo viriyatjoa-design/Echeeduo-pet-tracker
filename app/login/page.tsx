@@ -16,6 +16,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const t = {
+  linkError: "That sign-in link didn't work or expired — request a new one.",
+} as const;
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
@@ -25,9 +29,7 @@ function LoginForm() {
   const [status, setStatus] = React.useState<"idle" | "sending" | "sent">(
     "idle",
   );
-  const [error, setError] = React.useState<string | null>(
-    hadError ? strings.auth.genericError : null,
-  );
+  const [error, setError] = React.useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +74,14 @@ function LoginForm() {
 
       {status !== "sent" && (
         <CardContent>
+          {hadError && (
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-warning/50 bg-warning/15 px-3 py-2.5 text-sm text-foreground"
+            >
+              {t.linkError}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{strings.auth.emailLabel}</Label>
