@@ -188,6 +188,26 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* ── Inventory ────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Inventory</CardTitle>
+          <CardDescription>
+            Stock, purchases and monthly spend — food bags, litter, medicine
+            and when to restock.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/inventory"
+            className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-accent"
+          >
+            Open inventory
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        </CardContent>
+      </Card>
+
       {/* ── Session ──────────────────────────────────────── */}
       <div className="pt-2">
         <SignOutButton className="w-full">{strings.auth.signOut}</SignOutButton>

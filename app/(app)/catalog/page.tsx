@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Package, ChevronRight } from "lucide-react";
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getLookupsByCategory } from "@/lib/lookups";
@@ -16,6 +18,7 @@ const t = {
   subtitle: "Foods and meal templates for the whole household.",
   foods: "Foods",
   templates: "Meal templates",
+  inventory: "Inventory",
 } as const;
 
 export default async function CatalogPage() {
@@ -73,6 +76,17 @@ export default async function CatalogPage() {
         </h1>
         <p className="text-sm text-muted-foreground">{t.subtitle}</p>
       </div>
+
+      <Link
+        href="/inventory"
+        className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground hover:bg-accent"
+      >
+        <span className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          {t.inventory}
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
 
       <Tabs defaultValue="foods">
         <TabsList className="w-full">

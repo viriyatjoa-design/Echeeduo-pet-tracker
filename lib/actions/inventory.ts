@@ -4,6 +4,10 @@ import { db } from "@/lib/db";
 import { getCurrentAppUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getAllLookups } from "@/lib/lookups";
+import {
+  getItemMovements,
+  type StockMovementView,
+} from "@/lib/inventory-queries";
 
 /**
  * Inventory mutations (SPEC §11). Stock is a cached `quantity` on the item plus
@@ -376,4 +380,17 @@ export async function adjustStock(input: {
   }
 
   revalidate();
+}
+
+/**
+ * Read action so the History dialog can fetch on open instead of the page
+ * prefetching every item's movements (avoids N+1 on /inventory).
+ */
+export async function getItemMovementsAction(
+  itemId: string,
+  limit = 30,
+): Promise<StockMovementView[]> {
+  const me = await getCurrentAppUser();
+  if (!me) throw new Error("Unauthorized");
+  return getItemMovements(itemId, limit);
 }
