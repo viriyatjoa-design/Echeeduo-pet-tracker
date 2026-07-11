@@ -21,32 +21,47 @@ export async function consumeForFeedings(
     const database = db();
     const foodIds = Array.from(new Set(rows.map((r) => r.food_id)));
 
-    // One query: active inventory items linked to any fed food. Foods without
-    // a stocked item simply match nothing and are skipped.
+    // One query: active inventory items linked to any fed food, oldest first.
+    // Foods without a stocked item simply match nothing and are skipped.
     const { data: items, error: itemsErr } = await database
       .from("inventory_items")
-      .select("id, food_id, quantity")
+      .select("id, food_id, unit_id, quantity, created_at")
       .in("food_id", foodIds)
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .order("created_at", { ascending: true });
     if (itemsErr) throw new Error(itemsErr.message);
     if (!items || items.length === 0) return;
 
-    // One query: resolve the 'consumption' stock_reason lookup id (never hardcoded).
-    const { data: reason, error: reasonErr } = await database
+    // One query: the 'consumption' reason + the 'g' unit ids (never hardcoded).
+    const { data: lookupRows, error: lookupErr } = await database
       .from("lookups")
-      .select("id")
-      .eq("category", "stock_reason")
-      .eq("code", "consumption")
-      .maybeSingle();
-    if (reasonErr) throw new Error(reasonErr.message);
-    if (!reason) throw new Error("stock_reason/consumption lookup not found");
+      .select("id, category, code")
+      .in("category", ["stock_reason", "stock_unit"]);
+    if (lookupErr) throw new Error(lookupErr.message);
+    const reasonId = (lookupRows ?? []).find(
+      (l) => l.category === "stock_reason" && l.code === "consumption",
+    )?.id;
+    const gramsUnitId = (lookupRows ?? []).find(
+      (l) => l.category === "stock_unit" && l.code === "g",
+    )?.id;
+    if (!reasonId) throw new Error("stock_reason/consumption lookup not found");
+    if (!gramsUnitId) throw new Error("stock_unit/g lookup not found");
 
-    const itemsByFood = new Map<string, { id: string; quantity: number }[]>();
+    // Feeding amounts are grams, so only gram-unit items can be auto-consumed
+    // (subtracting 42.5 "pieces" from a pouch box would wipe real stock).
+    // If several gram items link the same food, consume from the OLDEST one —
+    // the already-opened bag — never from all of them (that would double-count).
+    const itemByFood = new Map<string, { id: string; quantity: number }>();
     for (const item of items) {
-      const list = itemsByFood.get(item.food_id as string) ?? [];
-      list.push({ id: item.id as string, quantity: Number(item.quantity) });
-      itemsByFood.set(item.food_id as string, list);
+      if (item.unit_id !== gramsUnitId) continue;
+      if (!itemByFood.has(item.food_id as string)) {
+        itemByFood.set(item.food_id as string, {
+          id: item.id as string,
+          quantity: Number(item.quantity),
+        });
+      }
     }
+    if (itemByFood.size === 0) return;
 
     // Build all movements + tally per-item consumed grams in one pass.
     const movements: Record<string, unknown>[] = [];
@@ -54,17 +69,17 @@ export async function consumeForFeedings(
     for (const row of rows) {
       const grams = Number(row.grams);
       if (!Number.isFinite(grams) || grams <= 0) continue;
-      for (const item of itemsByFood.get(row.food_id) ?? []) {
-        movements.push({
-          item_id: item.id,
-          delta: -grams,
-          reason_id: reason.id,
-          ref_entity_type: "feeding_log",
-          ref_entity_id: row.feeding_log_id ?? null,
-          created_by: createdBy,
-        });
-        consumedByItem.set(item.id, (consumedByItem.get(item.id) ?? 0) + grams);
-      }
+      const item = itemByFood.get(row.food_id);
+      if (!item) continue;
+      movements.push({
+        item_id: item.id,
+        delta: -grams,
+        reason_id: reasonId,
+        ref_entity_type: "feeding_log",
+        ref_entity_id: row.feeding_log_id ?? null,
+        created_by: createdBy,
+      });
+      consumedByItem.set(item.id, (consumedByItem.get(item.id) ?? 0) + grams);
     }
     if (movements.length === 0) return;
 

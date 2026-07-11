@@ -134,6 +134,15 @@ export async function createItem(input: {
   if (reorder != null && reorder < 1) throw new Error(t.reorderPositive);
 
   const database = db();
+  // Resolve the ledger reason BEFORE creating the item so a lookup failure
+  // can't leave an item without its opening movement. Opening stock is an
+  // 'adjustment', not a 'purchase' — seeding a half-used bag must not count
+  // toward this month's spending (getMonthlySpend counts purchases only).
+  const openingReasonId =
+    quantity > 0 ? await stockReasonId("adjustment") : null;
+  if (quantity > 0 && !openingReasonId) {
+    throw new Error(t.notSetUp);
+  }
   const { data: item, error } = await database
     .from("inventory_items")
     .insert({
@@ -157,8 +166,8 @@ export async function createItem(input: {
     const { error: moveErr } = await database.from("stock_movements").insert({
       item_id: item.id,
       delta: quantity,
-      reason_id: await stockReasonId("purchase"),
-      unit_cost: cost,
+      reason_id: openingReasonId,
+      unit_cost: null,
       notes: t.openingStock,
       created_by: me.id,
     });

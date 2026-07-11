@@ -42,7 +42,8 @@ const t = {
   unitPh: "Pick a unit",
   food: "Linked food",
   foodNone: "None",
-  foodHint: "Feeds of a linked food use up this item's stock automatically.",
+  foodHint:
+    "Feeds of a linked food use up this item's stock automatically — grams-unit items only.",
   quantity: "Initial quantity",
   quantityHint: "Logged as opening stock.",
   cost: "Cost per unit (IDR)",

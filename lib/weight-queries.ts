@@ -20,7 +20,10 @@ export const getWeightLogs = cache(
       .eq("cat_id", cat_id)
       .eq("is_active", true)
       .order("measured_at", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // Newest-first, so if the household ever exceeds this the oldest logs
+      // drop out — latest weight and the ~30-day trend baseline stay intact.
+      .limit(1000);
     if (error) throw new Error(error.message);
     return (data ?? []) as WeightLog[];
   },
@@ -56,7 +59,10 @@ export const getWeightLogsByCat = cache(
       .select(COLS)
       .eq("is_active", true)
       .order("measured_at", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // Newest-first, so if the household ever exceeds this the oldest logs
+      // drop out — latest weight and the ~30-day trend baseline stay intact.
+      .limit(1000);
     if (error) throw new Error(error.message);
 
     const map = new Map<UUID, WeightLog[]>();
@@ -81,7 +87,10 @@ export const getLatestWeightByCat = cache(
       .select(COLS)
       .eq("is_active", true)
       .order("measured_at", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // Newest-first, so if the household ever exceeds this the oldest logs
+      // drop out — latest weight and the ~30-day trend baseline stay intact.
+      .limit(1000);
     if (error) throw new Error(error.message);
 
     const map = new Map<UUID, WeightLog>();

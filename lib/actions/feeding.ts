@@ -86,7 +86,13 @@ export async function logFeed(input: {
 
   // Inventory consumption hook (SPEC §11) — best-effort, never throws.
   await consumeForFeedings(
-    [{ food_id: input.food_id, grams, feeding_log_id: inserted?.id ?? null }],
+    [
+      {
+        food_id: input.food_id,
+        grams: round1(grams),
+        feeding_log_id: inserted?.id ?? null,
+      },
+    ],
     me.id,
   );
 

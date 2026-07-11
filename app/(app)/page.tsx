@@ -89,8 +89,13 @@ export default async function TodayPage() {
 
   // Pure in-memory assembly from the batched maps above — no more queries.
   const emptySeries = empty7DayKcalSeries();
+  // A rarely-fed cat can fall out of the shared recent-logs window — fall
+  // back to the household MRU so its food list is never unordered/empty.
   const recentByCat = Object.fromEntries(
-    cats.map((c) => [c.id, recentFoodsByCat.get(c.id) ?? []]),
+    cats.map((c) => {
+      const own = recentFoodsByCat.get(c.id);
+      return [c.id, own && own.length > 0 ? own : mruFoodIds];
+    }),
   );
 
   const feedData = {

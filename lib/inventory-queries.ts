@@ -103,8 +103,10 @@ export const getInventoryItems = cache(
     if (items.length === 0) return [];
 
     const today = todayInTz();
+    // Window = the last (TRAILING_DAYS - 1) full Jakarta days + today so far
+    // ≈ TRAILING_DAYS days; -TRAILING_DAYS would span ~15 days but divide by 14.
     const windowStart = jakartaStartOfDayUtc(
-      addDaysToDate(today, -TRAILING_DAYS),
+      addDaysToDate(today, -(TRAILING_DAYS - 1)),
     );
     const consumptionId = await stockReasonId("consumption");
     const foodIds = Array.from(

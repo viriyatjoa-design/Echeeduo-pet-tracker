@@ -269,11 +269,15 @@ export async function get7DayKcalSeriesByCat(): Promise<
   const startDate = sevenDayStartDate();
   const start = startOfDayUtc(startDate);
 
+  // Newest-first + explicit limit: if the (absurd for a household) 1000-row
+  // cap is ever hit, we drop the oldest rows instead of arbitrary ones.
   const { data } = await db()
     .from("feeding_logs")
     .select("cat_id, kcal, fed_at")
     .eq("is_active", true)
-    .gte("fed_at", start);
+    .gte("fed_at", start)
+    .order("fed_at", { ascending: false })
+    .limit(1000);
 
   const bucketsByCat = new Map<string, Map<string, number>>();
   for (const log of data ?? []) {
