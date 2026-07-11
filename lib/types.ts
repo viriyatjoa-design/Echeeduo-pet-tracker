@@ -155,6 +155,39 @@ export type WaterLog = {
   created_at: string;
 };
 
+// ── Milestone 2: inventory (SPEC §11) ──────────────────────────────
+
+export type InventoryItem = {
+  id: UUID;
+  item_type_id: UUID;
+  name: string;
+  food_id: UUID | null;
+  unit_id: UUID;
+  quantity: number;
+  cost_per_unit: number | null; // whole IDR per unit
+  reorder_days: number | null;
+  expiry: string | null;
+  notes: string | null;
+  created_by: UUID;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type StockMovement = {
+  id: UUID;
+  item_id: UUID;
+  delta: number;
+  reason_id: UUID;
+  unit_cost: number | null; // IDR snapshot at purchase
+  ref_entity_type: string | null;
+  ref_entity_id: UUID | null;
+  moved_at: string;
+  notes: string | null;
+  created_by: UUID;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type SymptomLog = {
   id: UUID;
   cat_id: UUID;
