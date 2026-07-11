@@ -43,6 +43,7 @@ export function ItemHistory({
     if (!open) return;
     let cancelled = false;
     setFailed(false);
+    setMovements(null); // don't flash the previous open's list while refetching
     getItemMovementsAction(item.id)
       .then((rows) => {
         if (!cancelled) setMovements(rows);
