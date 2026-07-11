@@ -11,6 +11,7 @@ import {
 } from "@/lib/kcal";
 import { getLookupsByCategory } from "@/lib/lookups";
 import { getTodayKcalByCat } from "@/lib/feeding-queries";
+import { consumeForFeedings } from "@/lib/inventory-consume";
 
 /**
  * Feeding mutations (SPEC §6.1, §6.4, §7). kcal is DENORMALIZED at write time —
@@ -76,8 +77,18 @@ export async function logFeed(input: {
   const fedAt = clean(input.fed_at);
   if (fedAt) row.fed_at = fedAt;
 
-  const { error } = await database.from("feeding_logs").insert(row);
+  const { data: inserted, error } = await database
+    .from("feeding_logs")
+    .insert(row)
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
+
+  // Inventory consumption hook (SPEC §11) — best-effort, never throws.
+  await consumeForFeedings(
+    [{ food_id: input.food_id, grams, feeding_log_id: inserted?.id ?? null }],
+    me.id,
+  );
 
   // Treat rule (SPEC §6.1): only matters for snacks. One `if`, no rules engine.
   let treatWarning = false;
@@ -166,8 +177,21 @@ export async function applyMealTemplate(input: {
     };
   });
 
-  const { error } = await database.from("feeding_logs").insert(inserts);
+  const { data: insertedRows, error } = await database
+    .from("feeding_logs")
+    .insert(inserts)
+    .select("id, food_id, grams");
   if (error) throw new Error(error.message);
+
+  // Inventory consumption hook (SPEC §11) — best-effort, never throws.
+  await consumeForFeedings(
+    (insertedRows ?? []).map((r) => ({
+      food_id: r.food_id as string,
+      grams: Number(r.grams),
+      feeding_log_id: r.id as string,
+    })),
+    me.id,
+  );
 
   // Treat rule on the feed-all path too (SPEC §6.1): warn per cat whose snack
   // kcal now exceeds 10% of target. Same one-`if` logic as logFeed.
