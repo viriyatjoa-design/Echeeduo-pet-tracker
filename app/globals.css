@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Warm, domestic token layer — light + dark from one place (SPEC §7). */
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 26 24% 16%;
+
+    --card: 42 45% 99%;
+    --card-foreground: 26 24% 16%;
+
+    --popover: 42 45% 99%;
+    --popover-foreground: 26 24% 16%;
+
+    --primary: 18 54% 50%;
+    --primary-foreground: 40 40% 98%;
+
+    --secondary: 34 30% 91%;
+    --secondary-foreground: 26 24% 22%;
+
+    --muted: 34 24% 92%;
+    --muted-foreground: 28 12% 42%;
+
+    --accent: 30 44% 90%;
+    --accent-foreground: 20 40% 24%;
+
+    --destructive: 2 72% 50%;
+    --destructive-foreground: 40 40% 98%;
+
+    --warning: 36 92% 46%;
+    --warning-foreground: 30 60% 12%;
+
+    --success: 146 52% 38%;
+    --success-foreground: 140 40% 97%;
+
+    --border: 32 22% 86%;
+    --input: 32 22% 86%;
+    --ring: 18 54% 50%;
+
+    --radius: 1rem;
+
+    /* Default per-cat accent palette (assigned by index in lib/cats). */
+    --cat-1: 18 60% 52%;   /* terracotta */
+    --cat-2: 190 45% 42%;  /* teal */
+    --cat-3: 268 38% 56%;  /* plum */
+    --cat-4: 142 45% 40%;  /* sage */
+    --cat-5: 340 55% 56%;  /* rose */
+  }
+
+  .dark {
+    --background: 26 16% 10%;
+    --foreground: 40 22% 92%;
+
+    --card: 25 15% 13%;
+    --card-foreground: 40 22% 92%;
+
+    --popover: 25 15% 13%;
+    --popover-foreground: 40 22% 92%;
+
+    --primary: 20 62% 58%;
+    --primary-foreground: 26 30% 12%;
+
+    --secondary: 28 12% 20%;
+    --secondary-foreground: 40 20% 90%;
+
+    --muted: 28 10% 20%;
+    --muted-foreground: 34 12% 64%;
+
+    --accent: 26 16% 24%;
+    --accent-foreground: 40 22% 92%;
+
+    --destructive: 2 68% 56%;
+    --destructive-foreground: 40 40% 98%;
+
+    --warning: 38 90% 56%;
+    --warning-foreground: 30 60% 10%;
+
+    --success: 146 46% 50%;
+    --success-foreground: 140 40% 10%;
+
+    --border: 28 12% 24%;
+    --input: 28 12% 26%;
+    --ring: 20 62% 58%;
+
+    --cat-1: 18 62% 58%;
+    --cat-2: 190 48% 52%;
+    --cat-3: 268 42% 66%;
+    --cat-4: 142 46% 52%;
+    --cat-5: 340 58% 66%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Comfortable tap targets on mobile (SPEC §7). */
+  button,
+  [role="button"],
+  a {
+    touch-action: manipulation;
+  }
+}
+
+/* Prevent theme flash: html gets .dark from an inline script before paint. */
