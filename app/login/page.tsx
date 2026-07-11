@@ -50,9 +50,25 @@ function LoginForm() {
       });
       if (otpError) throw otpError;
       setStatus("sent");
-    } catch {
+    } catch (err) {
       setStatus("idle");
-      setError(strings.auth.genericError);
+      // Surface the real reason — Supabase messages like "email rate limit
+      // exceeded" are actionable; a generic error just makes people retry
+      // and burn more of the hourly limit.
+      const msg = err instanceof Error && err.message ? err.message : null;
+      if (msg && /rate limit/i.test(msg)) {
+        setError(
+          "Email limit reached — the free email sender allows only ~2 per hour. Wait an hour, then try once. (Permanent fix: custom SMTP, see SETUP.md.)",
+        );
+      } else if (msg && /security purposes|once every/i.test(msg)) {
+        setError("Please wait a minute before requesting another link.");
+      } else if (msg && /signups? not allowed/i.test(msg)) {
+        setError(
+          "New sign-ups are disabled in Supabase — enable 'Allow new users to sign up' under Authentication settings.",
+        );
+      } else {
+        setError(msg ?? strings.auth.genericError);
+      }
     }
   }
 
