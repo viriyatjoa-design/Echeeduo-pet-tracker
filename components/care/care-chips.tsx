@@ -81,7 +81,7 @@ function Chip({
   const toneClass =
     tone === "overdue"
       ? "bg-destructive/12 text-destructive"
-      : "bg-warning/15 text-warning-foreground";
+      : "bg-warning/15 text-warning";
 
   return (
     <span
