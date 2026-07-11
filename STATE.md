@@ -25,9 +25,11 @@ Wave 2 (done, build green):
 - [x] Observation (water/litter/symptom/`/journal`/health section)
 
 ## Phase C — Integration + ship
-- [ ] Today dashboard `/` (kcal ring, sparkline, care chips, feed-all, FAB)
-- [ ] PWA manifest + icons
-- [ ] `npm run build` + `tsc --noEmit` green
-- [ ] Ultracode audit vs SPEC §9 DoD
-- [ ] `SETUP.md`
-- [ ] Commit + push
+- [x] Today dashboard `/` (kcal ring, sparkline, care chips, feed-all, FAB)
+- [x] Cat profile `/cats/[id]` (feeding/weight/health/care tabs, avatar upload)
+- [x] `/admin/lists` linked from Settings
+- [x] PWA manifest + icons (sharp-generated, maskable + apple-touch)
+- [x] `npm run build` + `tsc --noEmit` green (13 routes)
+- [~] Ultracode audit vs SPEC §9 DoD (workflow running)
+- [x] `SETUP.md` owner runbook
+- [x] Commit + push (continuous)
