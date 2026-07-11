@@ -37,8 +37,7 @@ export async function WeightSection({ cat }: { cat: Cat }) {
   const latest = logs[0] ?? null;
 
   const accentStyle = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ["--cat-accent" as any]: `hsl(var(--cat-${cat.accent_index}))`,
+    "--cat-accent": `hsl(var(--cat-${cat.accent_index}))`,
   } as CSSProperties;
 
   const targetKg =

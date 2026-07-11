@@ -34,10 +34,10 @@ function byDueTime(a: CareEvent, b: CareEvent): number {
   return a.due_time.localeCompare(b.due_time);
 }
 
-export function bucketCareEvents(
-  events: CareEvent[],
+export function bucketCareEvents<T extends CareEvent>(
+  events: T[],
   today = todayInTz(),
-): CareBuckets {
+): { overdue: T[]; today: T[]; upcoming: T[] } {
   const open = events.filter(isOpen);
   return {
     overdue: open
