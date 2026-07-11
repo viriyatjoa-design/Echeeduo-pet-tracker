@@ -1,6 +1,15 @@
 # STATE — progress tracker (GSD)
 
-Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1** · Updated: 2026-07-11
+Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 shipped → M2 in progress** · Updated: 2026-07-12
+
+## Overnight session (2026-07-11 → 12)
+- [x] Perf: functions pinned to sin1 (was iad1 ↔ Singapore DB); dashboard N+1 batched (~15 flat queries)
+- [x] UX: loading skeletons all routes; error boundaries; login handles expired links
+- [x] V1 live on Vercel; owner logged in; cats seeded (Enoki/Cheeto/Tudou)
+- [~] **Milestone 2 (SPEC §11, owner-authorized 2026-07-11):** 003_inventory.sql + types done;
+  backend (queries/actions) done; feeding auto-consume hook done (best-effort, can't break
+  feeding); UI in progress. Degrades gracefully until owner runs migration 003.
+- [ ] Quality pass + focused re-audit of overnight changes, final green build + push
 
 ## Phase A — Foundation
 - [x] Config scaffold (Next 15 + TS + Tailwind v3 + shadcn tokens), light/dark token layer

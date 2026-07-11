@@ -1,5 +1,11 @@
 # Setup — get Purrfect Log running
 
+> **Already deployed? One pending step (added overnight):** the app now includes
+> **Inventory & spending** (Milestone 2). To activate it, open Supabase → **SQL Editor**
+> → New query → paste all of `supabase/migrations/003_inventory.sql` → **Run**
+> ("Success. No rows returned"). Until then the app works exactly as before —
+> the Inventory page just shows a "not set up yet" notice.
+
 Roughly 20–30 minutes end to end. You need a Supabase account and a Vercel account (both
 have free tiers that are plenty for a household).
 
