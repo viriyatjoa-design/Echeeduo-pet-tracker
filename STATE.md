@@ -18,11 +18,11 @@ Wave 1 (done, build green):
 - [x] Cats CRUD + `/settings` (cats + members)
 - [x] `/catalog` (foods + meal templates)
 - [x] Attachments (storage + signed URLs + compress) — `components/attachments/*`, `lib/storage.ts`
-Wave 2 (in progress):
-- [ ] `/log/feed` quick-log + feed-all + treat rule
-- [ ] Weight/BCS + chart + trend badge (components for cat profile)
-- [ ] Care engine + med course + `/care`
-- [ ] Observation (water/litter/symptom/`/journal`/health section)
+Wave 2 (done, build green):
+- [x] `/log/feed` quick-log + feed-all + treat rule
+- [x] Weight/BCS + chart + trend badge (components for cat profile)
+- [x] Care engine + med course + `/care`
+- [x] Observation (water/litter/symptom/`/journal`/health section)
 
 ## Phase C — Integration + ship
 - [ ] Today dashboard `/` (kcal ring, sparkline, care chips, feed-all, FAB)
