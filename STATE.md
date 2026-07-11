@@ -13,14 +13,16 @@ Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1** · Updated: 2026-07-1
 - [ ] `npm run build` green (subagent verifying)
 
 ## Phase B — Feature slices
-- [ ] `/admin/lists` lookups manager
-- [ ] Cats CRUD + `/settings` (cats + members)
-- [ ] `/catalog` (foods + meal templates)
-- [ ] `/log/feed` quick-log + treat rule
-- [ ] Weight/BCS + chart + trend badge
+Wave 1 (done, build green):
+- [x] `/admin/lists` lookups manager
+- [x] Cats CRUD + `/settings` (cats + members)
+- [x] `/catalog` (foods + meal templates)
+- [x] Attachments (storage + signed URLs + compress) — `components/attachments/*`, `lib/storage.ts`
+Wave 2 (in progress):
+- [ ] `/log/feed` quick-log + feed-all + treat rule
+- [ ] Weight/BCS + chart + trend badge (components for cat profile)
 - [ ] Care engine + med course + `/care`
-- [ ] Attachments (storage + signed URLs + compress)
-- [ ] Observation (water/litter/symptom/`/journal`/health tab)
+- [ ] Observation (water/litter/symptom/`/journal`/health section)
 
 ## Phase C — Integration + ship
 - [ ] Today dashboard `/` (kcal ring, sparkline, care chips, feed-all, FAB)
