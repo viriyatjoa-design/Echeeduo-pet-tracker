@@ -140,20 +140,17 @@ export function QuickFeed({
         <div className="flex flex-wrap gap-2">
           {cats.map((cat) => {
             const active = cat.id === catId;
+            // Tint the selected pill with the cat's accent.
+            const activeStyle = {
+              ["--cat-accent" as any]: `hsl(var(--cat-${cat.accent_index}))`,
+              backgroundColor: `hsl(var(--cat-${cat.accent_index}) / 0.14)`,
+            } as React.CSSProperties;
             return (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setCatId(cat.id)}
-                style={
-                  active
-                    ? {
-                        // tint the selected pill with the cat's accent
-                        ["--cat-accent" as string]: `hsl(var(--cat-${cat.accent_index}))`,
-                        backgroundColor: `hsl(var(--cat-${cat.accent_index}) / 0.14)`,
-                      }
-                    : undefined
-                }
+                style={active ? activeStyle : undefined}
                 className={cn(
                   "flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm font-medium transition-colors",
                   active

@@ -81,17 +81,18 @@ export function LitterForm({
   const [notes, setNotes] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
 
-  function reset() {
+  // Reset fields whenever the dialog opens (covers both trigger + controlled/FAB).
+  React.useEffect(() => {
+    if (!isOpen) return;
     setCatId(HOUSEHOLD);
     setUrine(true);
     setStool(false);
     setConsistencyId("");
     setNotes("");
     setFile(null);
-  }
+  }, [isOpen]);
 
   function setOpen(next: boolean) {
-    if (next) reset();
     if (controlled) onOpenChange?.(next);
     else setInternalOpen(next);
   }

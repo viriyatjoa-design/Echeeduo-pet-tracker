@@ -80,16 +80,17 @@ export function SymptomForm({
   const [notes, setNotes] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
 
-  function reset() {
+  // Reset fields whenever the dialog opens (covers both trigger + controlled/FAB).
+  React.useEffect(() => {
+    if (!isOpen) return;
     setCatId(cats.length === 1 ? cats[0].id : "");
     setTypeId("");
     setSeverity(1);
     setNotes("");
     setFile(null);
-  }
+  }, [isOpen, cats]);
 
   function setOpen(next: boolean) {
-    if (next) reset();
     if (controlled) onOpenChange?.(next);
     else setInternalOpen(next);
   }
