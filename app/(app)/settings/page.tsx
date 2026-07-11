@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { Cat } from "@/lib/types";
@@ -163,6 +165,26 @@ export default async function SettingsPage() {
             </h3>
             <MemberAddForm />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Lists (lookups manager) ──────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lists</CardTitle>
+          <CardDescription>
+            Care types, food types, symptoms and more — add options to any
+            list, or start a new one. No code changes needed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/admin/lists"
+            className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-accent"
+          >
+            Manage lists
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
         </CardContent>
       </Card>
 
