@@ -22,8 +22,10 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { createCareEvent } from "@/lib/actions/care";
+import { createCareEvent, logPastCareEvent } from "@/lib/actions/care";
+import { relativeDay, todayInTz } from "@/lib/time";
 import type { Cat, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
 
@@ -42,6 +44,13 @@ const t = {
   vet: "Vet",
   vetPh: "e.g. Dr. Tan · Happy Paws",
   saved: "Event created",
+  // "Already done" mode — for entering historical care (old vaccinations etc.)
+  alreadyDone: "Already done?",
+  alreadyDoneHint: "Record care that happened in the past",
+  doneDate: "Date done",
+  pastIntervalHint: "e.g. 365 for annual vaccine — schedules the next one",
+  savedPast: "Recorded",
+  savedPastNext: (d: string) => `Recorded — next one due ${d}`,
 } as const;
 
 export function CareEventForm({
@@ -63,6 +72,8 @@ export function CareEventForm({
   const [interval, setInterval] = React.useState("");
   const [vet, setVet] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [alreadyDone, setAlreadyDone] = React.useState(false);
+  const [doneDate, setDoneDate] = React.useState("");
 
   function reset() {
     setCatId("");
@@ -73,6 +84,8 @@ export function CareEventForm({
     setInterval("");
     setVet("");
     setNotes("");
+    setAlreadyDone(false);
+    setDoneDate("");
   }
 
   function onOpenChange(next: boolean) {
@@ -84,17 +97,35 @@ export function CareEventForm({
     e.preventDefault();
     startTransition(async () => {
       try {
-        await createCareEvent({
-          cat_id: catId,
-          event_type_id: typeId,
-          title,
-          due_date: dueDate || null,
-          due_time: dueTime || null,
-          interval_days: interval || null,
-          vet_name: vet || null,
-          notes: notes || null,
-        });
-        toast({ title: t.saved, variant: "success" });
+        if (alreadyDone) {
+          const { nextDueDate } = await logPastCareEvent({
+            cat_id: catId,
+            event_type_id: typeId,
+            title,
+            done_date: doneDate,
+            interval_days: interval || null,
+            vet_name: vet || null,
+            notes: notes || null,
+          });
+          toast({
+            title: nextDueDate
+              ? t.savedPastNext(relativeDay(nextDueDate))
+              : t.savedPast,
+            variant: "success",
+          });
+        } else {
+          await createCareEvent({
+            cat_id: catId,
+            event_type_id: typeId,
+            title,
+            due_date: dueDate || null,
+            due_time: dueTime || null,
+            interval_days: interval || null,
+            vet_name: vet || null,
+            notes: notes || null,
+          });
+          toast({ title: t.saved, variant: "success" });
+        }
         setOpen(false);
       } catch (err) {
         toast({
@@ -162,36 +193,66 @@ export function CareEventForm({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="care-date">
-                {t.dueDate}{" "}
-                <span className="text-muted-foreground">
-                  ({strings.common.optional})
-                </span>
+          <div className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5">
+            <div>
+              <Label htmlFor="care-already-done" className="cursor-pointer">
+                {t.alreadyDone}
               </Label>
-              <Input
-                id="care-date"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <p className="text-xs text-muted-foreground">
+                {t.alreadyDoneHint}
+              </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="care-time">
-                {t.dueTime}{" "}
-                <span className="text-muted-foreground">
-                  ({strings.common.optional})
-                </span>
-              </Label>
-              <Input
-                id="care-time"
-                type="time"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-              />
-            </div>
+            <Switch
+              id="care-already-done"
+              checked={alreadyDone}
+              onCheckedChange={setAlreadyDone}
+            />
           </div>
+
+          {alreadyDone ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="care-done-date">{t.doneDate}</Label>
+              <Input
+                id="care-done-date"
+                type="date"
+                value={doneDate}
+                max={todayInTz()}
+                onChange={(e) => setDoneDate(e.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="care-date">
+                  {t.dueDate}{" "}
+                  <span className="text-muted-foreground">
+                    ({strings.common.optional})
+                  </span>
+                </Label>
+                <Input
+                  id="care-date"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="care-time">
+                  {t.dueTime}{" "}
+                  <span className="text-muted-foreground">
+                    ({strings.common.optional})
+                  </span>
+                </Label>
+                <Input
+                  id="care-time"
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="care-interval">
@@ -208,7 +269,7 @@ export function CareEventForm({
               step="1"
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
-              placeholder={t.intervalHint}
+              placeholder={alreadyDone ? t.pastIntervalHint : t.intervalHint}
             />
           </div>
 
@@ -248,7 +309,10 @@ export function CareEventForm({
                 {strings.common.cancel}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending || !catId || !typeId}>
+            <Button
+              type="submit"
+              disabled={pending || !catId || !typeId || (alreadyDone && !doneDate)}
+            >
               {pending ? strings.common.loading : strings.common.save}
             </Button>
           </DialogFooter>

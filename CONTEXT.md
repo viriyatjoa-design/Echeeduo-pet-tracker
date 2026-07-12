@@ -1,6 +1,31 @@
 # CONTEXT — decisions & shared memory (GSD)
 
 Confirmed decisions that shape the build. Read alongside `SPEC.md`.
+**Append every owner decision to the Decision log below — this file is the
+cross-session memory; conversation context gets compacted, this doesn't.**
+
+## Decision log (append-only, newest last)
+| Date | Decision | Why |
+|---|---|---|
+| 07-11 | Auth: Zitadel → Supabase magic-link | Ship-by-tomorrow; only spec deviation (details below) |
+| 07-11 | Scope: full V1 (SPEC steps 1–12), GSD multi-agent waves | Owner picked both explicitly |
+| 07-11 | Milestone 2 (inventory/spend) authorized + built | Owner: "deliver new feature when I wake up" |
+| 07-12 | Cat cards: water widget → one-tap "Feed {cat}" button + water one-liner | Owner picked from 3 options; honors ≤3-taps DoD |
+| 07-12 | Water logging lives in FAB + Health tab only | Same decision |
+| 07-12 | Vercel functions pinned sin1; Supabase in Singapore | Perf (was iad1) |
+| 07-12 | Next.js 15.5.20 (CVE-2025-66478); Vercel blocks vulnerable versions | Deploy gate |
+| 07-12 | Cat accent convention: `--cat-accent` takes RAW triplet (`var(--cat-N)`) | Double-hsl() bug made accents render invisible |
+| 07-12 | Care rows: stacked layout, icon-only reschedule, no date repeat in groups | Owner screenshot: text crushed to 1 letter |
+| 07-12 | "Already done?" toggle on New event → `logPastCareEvent` (backdated done_at, next chains from historical date) | Owner needs to enter historical vaccinations |
+| 07-12 | **Milestone AI approved, provider = Kimi/Moonshot** (OpenAI-compatible, plain fetch, `MOONSHOT_API_KEY`, no new deps). Build order: label scanner (needs vision-model check on owner's account) + health brief/vet summary. NOT built yet — owner said "later" | Owner chose Kimi over Claude API |
+
+## Owner profile
+Rio (viriyatjoa@gmail.com) + wife (sinamoroll08@gmail.com, display "Wife").
+Cats: Enoki (accent 1 terracotta), Cheeto (2 teal), Tudou (3 plum).
+Timezone Asia/Jakarta. Non-developer — give click-by-click instructions,
+verify with screenshots. Deploys: Vercel (auto-deploy on push to
+`claude/pwa-gsd-build-ze198d`), DB: Supabase (owner runs migrations by
+pasting SQL in the SQL Editor — they are NOT auto-applied).
 
 ## Auth architecture (the one deviation from SPEC)
 SPEC §3–§4 specify Zitadel + NextAuth v5. **We use Supabase magic-link (email OTP) instead**

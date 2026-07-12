@@ -1,6 +1,22 @@
 # STATE — progress tracker (GSD)
 
-Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 shipped → M2 in progress** · Updated: 2026-07-12
+Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 + M2 shipped, live in production** · Updated: 2026-07-12
+
+## BACKLOG — open items (check here first when resuming)
+Owner-side (blocked on Rio):
+- [ ] Run `003_inventory.sql` in Supabase SQL Editor (activates inventory; app degrades gracefully until then) — status unconfirmed
+- [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
+- [ ] Fill cat details (sex/birth/neutered) + first weights to unlock kcal targets — status unconfirmed
+- [ ] Kimi/Moonshot: create API key + verify a vision model is available on the account (gates the label scanner)
+
+Build-side (approved, not started):
+- [ ] **Milestone AI** (Kimi provider — see CONTEXT.md decision log): `lib/ai.ts` fetch helper, health brief + vet-summary export, label scanner (pending vision check), graceful "add key" state, `MOONSHOT_API_KEY` env
+- [ ] Milestone 3 (SPEC §11): vet document vault, bloodwork tracking — NOT authorized yet
+
+## Recent session (2026-07-12, morning→day)
+- [x] "Already done?" toggle on New event — backdated care records (historical vaccinations); next occurrence chains from historical date (`logPastCareEvent`)
+- [x] Care page rows restacked (owner-reported crushed layout); cat name on rows
+- [x] Fixed invisible Feed buttons (double-hsl accent bug) — accents now render everywhere
 
 ## Overnight session (2026-07-11 → 12)
 - [x] Perf: functions pinned to sin1 (was iad1 ↔ Singapore DB); dashboard N+1 batched (~15 flat queries)

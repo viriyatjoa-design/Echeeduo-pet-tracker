@@ -70,6 +70,79 @@ export async function createCareEvent(input: CreateCareEventInput) {
   revalidate();
 }
 
+export type LogPastCareEventInput = {
+  cat_id: string;
+  event_type_id: string;
+  title: string;
+  /** 'YYYY-MM-DD' — the day the care actually happened (in the past). */
+  done_date: string;
+  interval_days?: number | string | null;
+  vet_name?: string | null;
+  notes?: string | null;
+};
+
+/**
+ * Record care that ALREADY happened (e.g. historical vaccinations from the vet
+ * booklet): inserts a completed event dated on the actual done date, and — if
+ * an interval is given — schedules the next open occurrence at done + interval,
+ * chaining from the historical date (not today).
+ */
+export async function logPastCareEvent(input: LogPastCareEventInput) {
+  const me = await getCurrentAppUser();
+  if (!me) throw new Error("Unauthorized");
+
+  if (!input.cat_id) throw new Error("Please pick a cat.");
+  if (!input.event_type_id) throw new Error("Please pick an event type.");
+  const title = clean(input.title);
+  if (!title) throw new Error("Title is required.");
+  const doneDate = clean(input.done_date);
+  if (!doneDate || !/^\d{4}-\d{2}-\d{2}$/.test(doneDate)) {
+    throw new Error("Please pick the date it was done.");
+  }
+  if (doneDate > todayInTz()) {
+    throw new Error("That date is in the future — use a regular event instead.");
+  }
+
+  const interval = posIntOrNull(input.interval_days);
+  const vetName = clean(input.vet_name);
+  const database = db();
+
+  // Completed historical record. done_at is stored at noon Jakarta on the done
+  // date so it renders as that day regardless of timezone conversion.
+  const { error } = await database.from("care_events").insert({
+    cat_id: input.cat_id,
+    event_type_id: input.event_type_id,
+    title,
+    due_date: doneDate,
+    done_at: `${doneDate}T12:00:00+07:00`,
+    interval_days: interval,
+    vet_name: vetName,
+    notes: clean(input.notes),
+    created_by: me.id,
+  });
+  if (error) throw new Error(error.message);
+
+  // Chain the next occurrence from the HISTORICAL date. May land in the past —
+  // that's correct: it shows as overdue, which is true.
+  let next: string | null = null;
+  if (interval != null) {
+    next = nextDueDate(doneDate, interval);
+    const { error: insErr } = await database.from("care_events").insert({
+      cat_id: input.cat_id,
+      event_type_id: input.event_type_id,
+      title,
+      due_date: next,
+      interval_days: interval,
+      vet_name: vetName,
+      created_by: me.id,
+    });
+    if (insErr) throw new Error(insErr.message);
+  }
+
+  revalidate();
+  return { nextDueDate: next };
+}
+
 /**
  * Complete an event: set done_at = now(). If it was recurring (interval_days
  * set), chain the next occurrence from the ACTUAL completion date (today in
