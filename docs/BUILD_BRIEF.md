@@ -84,7 +84,7 @@ large tap targets, `rounded-xl` controls / `rounded-2xl` cards, generous whitesp
 tokens only (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`,
 `bg-primary`, `border-border`, `bg-warning`, `bg-success`, `bg-destructive`) so light + dark
 both work. Per-cat accent: a cat has `accent_index` (1–5) → CSS var `--cat-{n}`; to tint an
-element for a cat use inline style `{{ ["--cat-accent" as any]: `hsl(var(--cat-${cat.accent_index}))` }}`
+element for a cat use inline style `{{ ["--cat-accent" as any]: `var(--cat-${cat.accent_index})` }}` (raw TRIPLET — the `cat` utility wraps it in hsl() itself; passing a full hsl() color double-wraps and silently renders nothing)
 and the `text-cat`/`bg-cat`/`border-cat` utilities (defined in tailwind config as
 `hsl(var(--cat-accent))`).
 

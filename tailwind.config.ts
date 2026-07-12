@@ -53,8 +53,9 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Per-cat accent — set --cat-accent inline on the cat's card/chart wrapper.
-        cat: "hsl(var(--cat-accent, var(--primary)))",
+        // Per-cat accent — set --cat-accent inline (RAW triplet, e.g.
+        // `var(--cat-2)`) on the cat's card/chart wrapper.
+        cat: "hsl(var(--cat-accent, var(--primary)) / <alpha-value>)",
       },
       borderRadius: {
         lg: "var(--radius)",

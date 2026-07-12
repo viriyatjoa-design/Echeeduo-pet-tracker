@@ -63,7 +63,7 @@ export function CatCard({
   feedData,
 }: CatCardData) {
   const accentStyle = {
-    "--cat-accent": `hsl(var(--cat-${cat.accent_index}))`,
+    "--cat-accent": `var(--cat-${cat.accent_index})`,
   } as CSSProperties;
 
   return (

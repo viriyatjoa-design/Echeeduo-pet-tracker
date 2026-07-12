@@ -142,7 +142,7 @@ export function QuickFeed({
             const active = cat.id === catId;
             // Tint the selected pill with the cat's accent.
             const activeStyle = {
-              ["--cat-accent" as any]: `hsl(var(--cat-${cat.accent_index}))`,
+              ["--cat-accent" as any]: `var(--cat-${cat.accent_index})`,
               backgroundColor: `hsl(var(--cat-${cat.accent_index}) / 0.14)`,
             } as React.CSSProperties;
             return (
