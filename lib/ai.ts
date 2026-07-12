@@ -29,7 +29,7 @@ export type AIMessage = {
 export async function askAI({
   messages,
   json = false,
-  maxTokens = 2000,
+  maxTokens = 8000,
 }: {
   messages: AIMessage[];
   /** Force a JSON-object response (OpenAI-style response_format). */
@@ -69,9 +69,32 @@ export async function askAI({
   }
 
   const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) {
-    throw new Error("AI returned an empty response — try again.");
+  const msg = data?.choices?.[0]?.message;
+  const finish = data?.choices?.[0]?.finish_reason;
+
+  // K2.6 is a thinking model: the answer is in `content`; internal reasoning
+  // may arrive separately (and can eat the whole token budget). `content` can
+  // also be an array of parts on some models — join the text parts.
+  let content: string = "";
+  if (typeof msg?.content === "string") {
+    content = msg.content;
+  } else if (Array.isArray(msg?.content)) {
+    content = msg.content
+      .map((part: { type?: string; text?: string }) =>
+        typeof part?.text === "string" ? part.text : "",
+      )
+      .join("");
+  }
+
+  if (!content.trim()) {
+    if (finish === "length") {
+      throw new Error(
+        "The AI ran out of tokens while thinking — tap again (budget was raised).",
+      );
+    }
+    throw new Error(
+      `AI returned an empty response (finish_reason: ${finish ?? "unknown"}) — try again.`,
+    );
   }
   return content;
 }

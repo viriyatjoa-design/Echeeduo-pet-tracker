@@ -140,7 +140,7 @@ export async function generateHealthBrief(catId: string): Promise<AIResult> {
         content: `Write a short health brief for ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns worth mentioning to the vet, or "nothing concerning" if so), "Coming up" (open care items). Under 250 words total.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-      maxTokens: 1200,
+      maxTokens: 6000,
     });
     return { ok: true, text };
   } catch (err) {
@@ -163,7 +163,7 @@ export async function generateVetSummary(catId: string): Promise<AIResult> {
         content: `Write a one-page summary of ${data.cat.name} for a VETERINARIAN visit. Clinical, factual, no speculation. Sections: "Patient" (signalment: breed, sex, neuter status, age if birth date known), "Weight & body condition" (trend with dates), "Diet & intake" (average daily kcal, target, appetite changes), "Elimination & water" (litter observations, water intake), "Recent symptoms" (dated list), "Care history" (vaccinations/treatments with dates — include everything dated), "Owner questions" (2-3 suggested questions based on the data). Under 350 words.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-      maxTokens: 1500,
+      maxTokens: 6000,
     });
     return { ok: true, text };
   } catch (err) {
@@ -201,7 +201,7 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
 
   const raw = await askAI({
     json: true,
-    maxTokens: 600,
+    maxTokens: 3000,
     messages: [
       {
         role: "system",
