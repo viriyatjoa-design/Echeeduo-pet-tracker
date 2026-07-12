@@ -27,9 +27,20 @@ const items: NavItem[] = [
   { href: "/settings", label: strings.nav.settings, icon: Settings },
 ];
 
+// Sub-routes highlight their owning tab so "where am I" survives in
+// standalone PWA mode (no URL bar).
+const TAB_PREFIXES: Record<string, string[]> = {
+  "/": ["/cats", "/log"],
+  "/catalog": ["/inventory"],
+  "/settings": ["/admin"],
+};
+
 function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(href + "/");
+  if (pathname === href) return true;
+  if (href !== "/" && pathname.startsWith(href + "/")) return true;
+  return (TAB_PREFIXES[href] ?? []).some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
 }
 
 export function BottomNav() {

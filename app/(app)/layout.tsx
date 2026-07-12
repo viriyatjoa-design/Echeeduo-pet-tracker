@@ -28,7 +28,7 @@ export default async function AppLayout({
           </div>
         </header>
 
-        <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
+        <main className="flex-1 px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] pt-4">{children}</main>
 
         <BottomNav />
         <Toaster />

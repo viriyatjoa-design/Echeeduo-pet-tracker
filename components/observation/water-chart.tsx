@@ -13,15 +13,6 @@ import {
 import { formatDate } from "@/lib/time";
 import type { WaterDayPoint } from "@/lib/observation-queries";
 
-/** Resolve an HSL-triplet CSS var (e.g. "16 85% 60%") to a usable color. */
-function readVar(name: string, fallback: string): string {
-  if (typeof window === "undefined") return fallback;
-  const v = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-  return v ? `hsl(${v})` : fallback;
-}
-
 /** Compact x-axis label: day-of-month from a 'YYYY-MM-DD'. */
 function dayTick(date: string): string {
   const d = date.slice(8, 10);
@@ -30,8 +21,8 @@ function dayTick(date: string): string {
 
 /**
  * Last ~14 days of water intake (ml/day) for one cat. Client-only (recharts).
- * Colors are read from the theme's CSS vars at mount so light/dark both work
- * and the bars use the cat's accent.
+ * Colors reference the theme CSS vars directly (like weight-chart) so a theme
+ * toggle re-colors the chart live — no mount-time snapshot to go stale.
  */
 export function WaterChart({
   data,
@@ -40,19 +31,11 @@ export function WaterChart({
   data: WaterDayPoint[];
   accentIndex?: number;
 }) {
-  const [colors, setColors] = React.useState({
-    bar: "#94a3b8",
-    axis: "#94a3b8",
-    grid: "rgba(148,163,184,0.25)",
-  });
-
-  React.useEffect(() => {
-    setColors({
-      bar: readVar(`--cat-${accentIndex}`, "#94a3b8"),
-      axis: readVar("--muted-foreground", "#94a3b8"),
-      grid: readVar("--border", "rgba(148,163,184,0.25)"),
-    });
-  }, [accentIndex]);
+  const colors = {
+    bar: `hsl(var(--cat-${accentIndex}))`,
+    axis: "hsl(var(--muted-foreground))",
+    grid: "hsl(var(--border))",
+  };
 
   return (
     <div className="h-40 w-full">

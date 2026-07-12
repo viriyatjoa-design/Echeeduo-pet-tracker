@@ -120,7 +120,7 @@ export default async function CarePage() {
 
       {today.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-warning">
+          <h2 className="text-sm font-semibold text-warning-strong">
             {strings.care.dueToday}
           </h2>
           <ul className="space-y-2">

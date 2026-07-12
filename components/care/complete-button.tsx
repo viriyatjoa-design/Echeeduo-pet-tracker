@@ -21,7 +21,7 @@ const t = {
 export function CompleteButton({
   id,
   variant = "outline",
-  size = "sm",
+  size = "default",
   className,
   label = strings.care.complete,
   iconOnly = false,

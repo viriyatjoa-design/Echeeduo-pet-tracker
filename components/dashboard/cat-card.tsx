@@ -1,16 +1,18 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Droplets, ChevronRight } from "lucide-react";
+import { Droplets, ChevronRight, Utensils } from "lucide-react";
 import type { Cat, CareEvent, WeightLog } from "@/lib/types";
 import type { KcalPoint, LastFed } from "@/lib/feeding-queries";
 import type { WeightTrend } from "@/lib/weight";
 import { gramsToKg } from "@/lib/weight";
 import { formatTime } from "@/lib/time";
 import { round1 } from "@/lib/kcal";
+import { Button } from "@/components/ui/button";
 import { CatAvatar } from "@/components/cats/cat-avatar";
 import { WeightBadge } from "@/components/weight/weight-badge";
 import { CareChips } from "@/components/care/care-chips";
-import { WaterQuickAdd } from "@/components/observation/water-quick-add";
+import { FeedDialog } from "@/components/feed/feed-dialog";
+import type { FeedData } from "@/components/feed/quick-feed";
 import { KcalRing } from "./kcal-ring";
 import { KcalSparkline } from "./kcal-sparkline";
 
@@ -18,8 +20,8 @@ const t = {
   lastFed: "Last fed",
   noFeeds: "No feeds yet today",
   by: "by",
-  water: "Water",
-  ml: "ml",
+  feed: "Feed",
+  ml: "ml today",
   weight: "Weight",
   noWeight: "No weight logged",
   last7: "Last 7 days",
@@ -37,6 +39,7 @@ export type CatCardData = {
   waterMl: number;
   careEvents: CareEvent[];
   careTypeLabels: Map<string, string>;
+  feedData: FeedData;
 };
 
 /**
@@ -57,6 +60,7 @@ export function CatCard({
   waterMl,
   careEvents,
   careTypeLabels,
+  feedData,
 }: CatCardData) {
   const accentStyle = {
     "--cat-accent": `hsl(var(--cat-${cat.accent_index}))`,
@@ -120,18 +124,26 @@ export function CatCard({
           )}
         </p>
 
-        {/* Water */}
-        <div className="space-y-2 rounded-xl border border-border/70 p-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-              <Droplets className="h-4 w-4 text-cat" aria-hidden />
-              {t.water}
-            </span>
-            <span className="tabular-nums text-muted-foreground">
-              {waterMl} {t.ml} today
-            </span>
-          </div>
-          <WaterQuickAdd cats={[cat]} />
+        {/* One-tap feed (the daily action) + compact water summary.
+            Water logging stays in the FAB and the cat's Health tab. */}
+        <div className="flex items-center gap-3">
+          <FeedDialog
+            {...feedData}
+            initialCatId={cat.id}
+            trigger={
+              <Button
+                className="h-11 flex-1 bg-cat text-white hover:bg-cat/90"
+                aria-label={`${t.feed} ${cat.name}`}
+              >
+                <Utensils aria-hidden />
+                {t.feed} {cat.name}
+              </Button>
+            }
+          />
+          <span className="inline-flex shrink-0 items-center gap-1 text-sm tabular-nums text-muted-foreground">
+            <Droplets className="h-4 w-4 text-cat" aria-hidden />
+            {waterMl} {t.ml}
+          </span>
         </div>
 
         {/* Weight + trend */}

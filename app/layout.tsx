@@ -26,10 +26,15 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Required for env(safe-area-inset-*) to be non-zero on iOS — the nav,
+  // FAB, and toaster all pad with it.
+  viewportFit: "cover",
 };
 
-// Set theme class before paint to avoid a flash.
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(!t&&m)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+// Set theme class before paint to avoid a flash, and keep the browser-chrome
+// theme-color in sync with the CHOSEN theme (not just the OS preference) —
+// the theme toggle calls the same window hook on toggle.
+const themeScript = `(function(){try{var apply=function(dark){document.documentElement.classList.toggle('dark',dark);var c=dark?'#1c1712':'#f7f3ec';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.setAttribute('content',c)})};window.__setTheme=apply;var t=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)').matches;apply(t==='dark'||(!t&&m))}catch(e){}})();`;
 
 export default function RootLayout({
   children,

@@ -141,7 +141,7 @@ export function LookupRow({
           type="button"
           size="icon"
           variant="ghost"
-          className="h-6 w-6"
+          className="h-8 w-8"
           aria-label={t.moveUp}
           disabled={isFirst || pending}
           onClick={() => run(() => moveLookup(lookup.id, "up"), t.moveFailed)}
@@ -152,7 +152,7 @@ export function LookupRow({
           type="button"
           size="icon"
           variant="ghost"
-          className="h-6 w-6"
+          className="h-8 w-8"
           aria-label={t.moveDown}
           disabled={isLast || pending}
           onClick={() => run(() => moveLookup(lookup.id, "down"), t.moveFailed)}

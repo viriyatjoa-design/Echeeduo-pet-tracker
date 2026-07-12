@@ -14,7 +14,13 @@ export function ThemeToggle() {
   function toggle() {
     const root = document.documentElement;
     const next = !root.classList.contains("dark");
-    root.classList.toggle("dark", next);
+    // __setTheme (defined in the root layout boot script) flips the class AND
+    // the browser-chrome theme-color meta so the status bar matches.
+    const setTheme = (
+      window as Window & { __setTheme?: (dark: boolean) => void }
+    ).__setTheme;
+    if (setTheme) setTheme(next);
+    else root.classList.toggle("dark", next);
     try {
       localStorage.setItem("theme", next ? "dark" : "light");
     } catch {

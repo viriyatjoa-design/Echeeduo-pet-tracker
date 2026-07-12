@@ -169,6 +169,7 @@ export default async function TodayPage() {
             <CatCard
               key={cat.id}
               cat={cat}
+              feedData={feedData}
               kcal={totals?.kcal ?? 0}
               target={target}
               treat={exceedsTreatLimit(snackKcal, target)}

@@ -151,7 +151,7 @@ function JournalDetails({ entry }: { entry: JournalEntry }) {
           )}
         </div>
         {entry.notes && (
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
             {entry.notes}
           </p>
         )}
@@ -181,7 +181,7 @@ function JournalDetails({ entry }: { entry: JournalEntry }) {
         )}
       </div>
       {entry.notes && (
-        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+        <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
           {entry.notes}
         </p>
       )}
