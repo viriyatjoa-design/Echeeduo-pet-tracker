@@ -37,6 +37,7 @@
 
     --destructive: 4 70% 47%;
     --destructive-foreground: 45 40% 98%;
+    --destructive-strong: 4 74% 42%;  /* red as small TEXT on card (AA) */
 
     --warning: 36 92% 46%;
     --warning-foreground: 30 60% 12%;
@@ -88,6 +89,7 @@
 
     --destructive: 4 65% 58%;
     --destructive-foreground: 45 40% 98%;
+    --destructive-strong: 4 82% 72%;  /* lighter for AA text on the dark card */
 
     --warning: 38 90% 56%;
     --warning-foreground: 30 60% 10%;

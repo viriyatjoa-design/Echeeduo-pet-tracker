@@ -30,7 +30,7 @@ const STATUS: Record<
   attention: {
     dot: "bg-destructive",
     label: "Look",
-    labelColor: "text-destructive",
+    labelColor: "text-destructive-strong",
   },
   info: {
     dot: "bg-muted-foreground/50",

@@ -159,11 +159,33 @@ function scoreEating(input: ScoreInput): ScoreDimension {
       note: "No feeds logged in this window.",
     };
   }
+  // The average is over DAYS THAT HAD A FEED (portion-size on fed days), not
+  // the whole window — so too few logged days can't be graded, and we say how
+  // many days back the number.
+  if (input.kcalDays < 3) {
+    return {
+      key: "eating",
+      title: "Eating",
+      status: "unknown",
+      value: "",
+      detail,
+      note: `Only ${input.kcalDays} day${input.kcalDays > 1 ? "s" : ""} of feeds logged — not enough to grade yet.`,
+    };
+  }
   const avg = Math.round(input.avgKcal);
-  const value = `${avg} kcal/day avg`;
+  const value = `${avg} kcal/day`;
+  const coverage =
+    input.kcalDays < 10 ? ` Based on ${input.kcalDays} days logged.` : "";
   const ratio = input.avgKcal / target;
   if (ratio >= BREED_REF.kcalOnTrack.min && ratio <= BREED_REF.kcalOnTrack.max) {
-    return { key: "eating", title: "Eating", status: "good", value, detail };
+    return {
+      key: "eating",
+      title: "Eating",
+      status: "good",
+      value,
+      detail,
+      note: coverage.trim() || undefined,
+    };
   }
   if (ratio > BREED_REF.kcalOnTrack.max) {
     return {
@@ -172,7 +194,7 @@ function scoreEating(input: ScoreInput): ScoreDimension {
       status: "watch",
       value,
       detail,
-      note: `About ${Math.round((ratio - 1) * 100)}% over target — the breed gains weight easily.`,
+      note: `About ${Math.round((ratio - 1) * 100)}% over target — the breed gains weight easily.${coverage}`,
     };
   }
   return {
@@ -181,7 +203,7 @@ function scoreEating(input: ScoreInput): ScoreDimension {
     status: "watch",
     value,
     detail,
-    note: `About ${Math.round((1 - ratio) * 100)}% under target — fine short-term, worth watching if appetite is down.`,
+    note: `About ${Math.round((1 - ratio) * 100)}% under target — fine short-term, worth watching if appetite is down.${coverage}`,
   };
 }
 
@@ -205,6 +227,22 @@ function scoreHydration(input: ScoreInput): ScoreDimension {
   }
   const avg = Math.round(input.avgWaterMl);
   const value = `${avg} ml/day logged`;
+  const perKg =
+    input.latestWeightGrams && input.latestWeightGrams > 0
+      ? input.avgWaterMl / (input.latestWeightGrams / 1000)
+      : null;
+  // High bowl intake (>100 ml/kg/day from DRINKING alone, food excluded) is a
+  // polydipsia signal in the breed references — never greenlight it.
+  if (perKg != null && perKg >= 100) {
+    return {
+      key: "hydration",
+      title: "Hydration",
+      status: "info",
+      value,
+      detail,
+      note: "That's a lot of drinking — a big jump in water is worth mentioning to your vet.",
+    };
+  }
   if (target && avg >= target) {
     return { key: "hydration", title: "Hydration", status: "good", value, detail };
   }
@@ -254,11 +292,11 @@ export function healthScorecard(input: ScoreInput): Scorecard {
   const watch = dimensions.filter((d) => d.status === "watch").length;
   // A real health signal means weight/bcs/eating is actually known — care being
   // vacuously "up to date" (no events) must not read as a clean bill of health.
-  const healthKnown = dimensions.some(
-    (d) =>
-      (d.key === "weight" || d.key === "bcs" || d.key === "eating") &&
-      d.status !== "unknown",
-  );
+  const known = (key: ScoreDimension["key"]) =>
+    dimensions.find((d) => d.key === key)?.status !== "unknown";
+  const healthKnown = known("weight") || known("bcs") || known("eating");
+  // A confident all-clear needs more than one lone data point.
+  const strongSignal = known("weight") && (known("bcs") || known("eating"));
 
   let overall: ScoreStatus;
   let headline: string;
@@ -270,7 +308,9 @@ export function healthScorecard(input: ScoreInput): Scorecard {
     headline = `${watch} thing${watch > 1 ? "s" : ""} worth watching.`;
   } else if (healthKnown) {
     overall = "good";
-    headline = "Looking healthy across the board.";
+    headline = strongSignal
+      ? "Looking healthy across the board."
+      : "On track so far — add body condition and a few feeds for the full picture.";
   } else {
     overall = "unknown";
     headline = "Log a weight and a few feeds to see how they're doing.";

@@ -42,6 +42,15 @@ describe("healthScorecard — weight", () => {
     // 4800g is BELOW the male band (5000–7000) but inside the female band.
     expect(dim(healthScorecard(input({ sex: "male" })), "weight").status).toBe("watch");
   });
+  it("pins the band edges as good (female 3500 and 5500)", () => {
+    expect(dim(healthScorecard(input({ latestWeightGrams: 3500 })), "weight").status).toBe("good");
+    expect(dim(healthScorecard(input({ latestWeightGrams: 5500 })), "weight").status).toBe("good");
+  });
+  it("pins the 10%-over boundary: exactly 10% is watch, just past is attention", () => {
+    // Female band max 5500 → 6050 is exactly +10% (not > 10%), 6060 is past it.
+    expect(dim(healthScorecard(input({ latestWeightGrams: 6050 })), "weight").status).toBe("watch");
+    expect(dim(healthScorecard(input({ latestWeightGrams: 6060 })), "weight").status).toBe("attention");
+  });
 });
 
 describe("healthScorecard — body condition", () => {
@@ -63,8 +72,14 @@ describe("healthScorecard — eating", () => {
   it("on target is good", () => {
     expect(dim(healthScorecard(input({ avgKcal: 260 })), "eating").status).toBe("good");
   });
-  it("115% of target is still good (boundary)", () => {
+  it("115% of target is still good (upper boundary)", () => {
     expect(dim(healthScorecard(input({ avgKcal: 260 * 1.15 })), "eating").status).toBe("good");
+  });
+  it("80% of target is still good (lower boundary)", () => {
+    expect(dim(healthScorecard(input({ avgKcal: 208 })), "eating").status).toBe("good"); // 208/260 = 0.8
+  });
+  it("too few logged days can't be graded (coverage gate)", () => {
+    expect(dim(healthScorecard(input({ kcalDays: 2, avgKcal: 260 })), "eating").status).toBe("unknown");
   });
   it("clearly over target is watch", () => {
     expect(dim(healthScorecard(input({ avgKcal: 340 })), "eating").status).toBe("watch");
@@ -91,6 +106,12 @@ describe("healthScorecard — hydration (never alarming)", () => {
     const d = dim(healthScorecard(input({ avgWaterMl: null })), "hydration");
     expect(d.status).toBe("info");
     expect(d.value).toBe("not logged");
+  });
+  it("excessive drinking (>100 ml/kg) is info with a vet note, never good", () => {
+    // 4800g cat drinking 600 ml/day = 125 ml/kg → polydipsia signal.
+    const d = dim(healthScorecard(input({ avgWaterMl: 600 })), "hydration");
+    expect(d.status).toBe("info");
+    expect(d.note).toMatch(/vet/i);
   });
 });
 
@@ -131,6 +152,23 @@ describe("healthScorecard — overall rollup", () => {
   it("watch when only watches, no attention", () => {
     const card = healthScorecard(input({ avgKcal: 340 }));
     expect(card.overall).toBe("watch");
+  });
+  it("attention wins over a co-occurring watch", () => {
+    const card = healthScorecard(input({ latestBcs: 8, avgKcal: 340 }));
+    expect(card.overall).toBe("attention");
+  });
+  it("a lone in-band weight softens the all-clear headline", () => {
+    const card = healthScorecard(
+      input({
+        latestBcs: null,
+        avgKcal: null,
+        kcalDays: 0,
+        avgWaterMl: null,
+        overdueCare: [],
+      }),
+    );
+    expect(card.overall).toBe("good");
+    expect(card.headline).toMatch(/On track so far/);
   });
   it("no health signal is unknown even if no care is overdue", () => {
     const card = healthScorecard(

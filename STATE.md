@@ -40,7 +40,17 @@ Build-side:
   (14-day Jakarta window: avg kcal on fed-days, avg logged water, overdue care) + `ScorecardView`
   UI. Hydration is INFORMATIONAL only (wet-fed cats never false-flag). NO migration — computes
   from existing data, degrades with "log a weight" nudges. 25 unit tests (64 total). Build green,
-  visually verified light+dark. [audit fixes to follow]
+  visually verified light+dark.
+- [x] **Scorecard audit** (24-agent workflow, find→refute→fix): 13 confirmed findings fixed.
+  Notably: hydration no longer greenlights excessive drinking (>100 ml/kg = polydipsia → info
+  + vet note, never "Good"); eating graded against IDEAL-weight kcal target (overweight cats
+  no longer read "on track"); eating coverage gate (<3 fed-days = can't grade) + honest
+  "based on N days"; BCS falls back to the most recent weigh-in that recorded one; lean
+  feeding query (dropped 2 discarded join queries); softened all-clear headline when only a
+  lone weight is known; `--destructive-strong` text token for AA "Look" label in dark mode;
+  +7 boundary/precedence tests (71 total). Accepted: the Health tab still fetches eagerly like
+  the other tabs (a full lazy-tab refactor is out of scope; the lean query keeps it to ~3
+  extra queries).
 
 ## Hardening session (2026-07-12, evening — 5-track multi-agent)
 - [x] **Adversarial audit** (55-agent workflow, find→refute→fix): 20 verified findings fixed

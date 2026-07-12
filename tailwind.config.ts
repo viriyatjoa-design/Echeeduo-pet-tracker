@@ -41,6 +41,7 @@ const config: Config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
+          strong: "hsl(var(--destructive-strong) / <alpha-value>)",
         },
         warning: {
           DEFAULT: "hsl(var(--warning) / <alpha-value>)",
