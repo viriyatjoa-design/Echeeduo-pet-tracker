@@ -17,6 +17,8 @@ cross-session memory; conversation context gets compacted, this doesn't.**
 | 07-12 | Cat accent convention: `--cat-accent` takes RAW triplet (`var(--cat-N)`) | Double-hsl() bug made accents render invisible |
 | 07-12 | Care rows: stacked layout, icon-only reschedule, no date repeat in groups | Owner screenshot: text crushed to 1 letter |
 | 07-12 | "Already done?" toggle on New event → `logPastCareEvent` (backdated done_at, next chains from historical date) | Owner needs to enter historical vaccinations |
+| 07-12 | Care events removable (soft delete, trash icon on /care + timeline); Done on not-yet-due events asks confirmation | Owner hit duplicate-done chain-march; wanted delete |
+| 07-12 | Feeding gets "Now / Earlier" — backdate forgotten logs (quick feed + feed all, server rejects future) | Owner: "sometimes we forgot to log directly" |
 | 07-12 | **Milestone AI approved, provider = Kimi/Moonshot** (OpenAI-compatible, plain fetch, `MOONSHOT_API_KEY`, no new deps). Build order: label scanner (needs vision-model check on owner's account) + health brief/vet summary. NOT built yet — owner said "later" | Owner chose Kimi over Claude API |
 
 ## Owner profile
