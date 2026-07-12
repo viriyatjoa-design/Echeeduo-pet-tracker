@@ -22,6 +22,9 @@ Build-side:
   user-facing expected errors to returned values app-wide.
 
 ## Recent session (2026-07-12, day — morning report)
+- [x] Stale-PWA fix (owner hit it logging litter after the deploy): `lib/action-error.ts`
+  translates Next's 'Server Action "<hash>" was not found' into "close and reopen the app",
+  applied at all 27 toast catch sites + 2 previously-uncaught action awaits.
 - [x] **Morning report** (owner-approved shape from brainstorm): nightly household digest.
   `lib/briefs.ts` (gather last-24h logs across cats → fast model → store in `ai_briefs`,
   migration 005; empty night = stored "Quiet day" line, NO AI call). Cron route
