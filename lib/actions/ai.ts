@@ -117,15 +117,22 @@ async function gatherCatData(catId: string) {
   };
 }
 
-export async function generateHealthBrief(
-  catId: string,
-): Promise<{ text: string }> {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
-  if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+export type AIResult =
+  | { ok: true; text: string }
+  | { ok: false; error: string };
 
-  const data = await gatherCatData(catId);
-  const text = await askAI({
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
+}
+
+export async function generateHealthBrief(catId: string): Promise<AIResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) throw new Error("Unauthorized");
+    if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+
+    const data = await gatherCatData(catId);
+    const text = await askAI({
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -133,20 +140,22 @@ export async function generateHealthBrief(
         content: `Write a short health brief for ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns worth mentioning to the vet, or "nothing concerning" if so), "Coming up" (open care items). Under 250 words total.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-    maxTokens: 1200,
-  });
-  return { text };
+      maxTokens: 1200,
+    });
+    return { ok: true, text };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
-export async function generateVetSummary(
-  catId: string,
-): Promise<{ text: string }> {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
-  if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+export async function generateVetSummary(catId: string): Promise<AIResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) throw new Error("Unauthorized");
+    if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
 
-  const data = await gatherCatData(catId);
-  const text = await askAI({
+    const data = await gatherCatData(catId);
+    const text = await askAI({
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
@@ -154,9 +163,12 @@ export async function generateVetSummary(
         content: `Write a one-page summary of ${data.cat.name} for a VETERINARIAN visit. Clinical, factual, no speculation. Sections: "Patient" (signalment: breed, sex, neuter status, age if birth date known), "Weight & body condition" (trend with dates), "Diet & intake" (average daily kcal, target, appetite changes), "Elimination & water" (litter observations, water intake), "Recent symptoms" (dated list), "Care history" (vaccinations/treatments with dates — include everything dated), "Owner questions" (2-3 suggested questions based on the data). Under 350 words.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-    maxTokens: 1500,
-  });
-  return { text };
+      maxTokens: 1500,
+    });
+    return { ok: true, text };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 export type ScannedLabel = {
@@ -167,14 +179,17 @@ export type ScannedLabel = {
   note: string | null;
 };
 
-export async function scanFoodLabel(
-  formData: FormData,
-): Promise<ScannedLabel> {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
-  if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+export type ScanResult =
+  | { ok: true; data: ScannedLabel }
+  | { ok: false; error: string };
 
-  const file = formData.get("file");
+export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) throw new Error("Unauthorized");
+    if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+
+    const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("No photo received — try again.");
   }
@@ -213,10 +228,16 @@ export async function scanFoodLabel(
     return Number.isFinite(n) && n > 0 ? n : null;
   };
   return {
-    name: typeof parsed.name === "string" ? parsed.name : null,
-    brand: typeof parsed.brand === "string" ? parsed.brand : null,
-    kcal_per_100g: num(parsed.kcal_per_100g),
-    unit_grams: num(parsed.unit_grams),
-    note: typeof parsed.note === "string" ? parsed.note : null,
+    ok: true,
+    data: {
+      name: typeof parsed.name === "string" ? parsed.name : null,
+      brand: typeof parsed.brand === "string" ? parsed.brand : null,
+      kcal_per_100g: num(parsed.kcal_per_100g),
+      unit_grams: num(parsed.unit_grams),
+      note: typeof parsed.note === "string" ? parsed.note : null,
+    },
   };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }

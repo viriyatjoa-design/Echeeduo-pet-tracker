@@ -102,7 +102,12 @@ export function FoodForm({
       const compressed = await compressImage(picked, 1600, 0.82);
       const fd = new FormData();
       fd.append("file", compressed);
-      const scanned = await scanFoodLabel(fd);
+      const res = await scanFoodLabel(fd);
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
+      }
+      const scanned = res.data;
 
       if (
         scanned.name == null &&

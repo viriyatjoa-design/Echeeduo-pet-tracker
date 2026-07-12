@@ -48,11 +48,17 @@ export function HealthBriefCard({
   async function run(kind: Kind) {
     setPending(kind);
     try {
-      const { text } =
+      // Actions return result objects (never throw for expected failures) so
+      // the real error message survives production's server-error masking.
+      const res =
         kind === "brief"
           ? await generateHealthBrief(catId)
           : await generateVetSummary(catId);
-      setResult({ text, at: new Date().toISOString() });
+      if (res.ok) {
+        setResult({ text: res.text, at: new Date().toISOString() });
+      } else {
+        toast({ title: res.error, variant: "destructive" });
+      }
     } catch (err) {
       toast({
         title: err instanceof Error ? err.message : t.genericError,
