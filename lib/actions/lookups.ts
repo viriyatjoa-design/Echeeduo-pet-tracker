@@ -11,6 +11,15 @@ import type { Lookup } from "@/lib/types";
 
 const SLUG_RE = /^[a-z0-9_]+$/;
 
+// Actions return a result object instead of throwing: in production Next.js
+// strips a thrown Error's message and shows a generic banner, so the call-site
+// can't surface why (see lib/actions/ai.ts for the same pattern).
+export type LookupResult = { ok: true } | { ok: false; error: string };
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
+}
+
 /** lowercase, a-z0-9_ only — same rule the client uses to preview codes. */
 function slugify(input: string): string {
   return input
@@ -55,38 +64,43 @@ export async function createLookup(input: {
   category: string;
   code: string;
   label: string;
-}): Promise<void> {
-  await requireMember();
+}): Promise<LookupResult> {
+  try {
+    await requireMember();
 
-  const category = requireSlug(input.category, "category");
-  const label = input.label.trim();
-  if (!label) throw new Error("Please give this entry a label.");
-  const code = requireSlug(input.code.trim() || label, "code");
+    const category = requireSlug(input.category, "category");
+    const label = input.label.trim();
+    if (!label) return { ok: false, error: "Please give this entry a label." };
+    const code = requireSlug(input.code.trim() || label, "code");
 
-  const admin = db();
+    const admin = db();
 
-  // Next sort_order = max in this category + 1 (append to the end).
-  const { data: last } = await admin
-    .from("lookups")
-    .select("sort_order")
-    .eq("category", category)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const sortOrder = ((last?.sort_order as number | undefined) ?? 0) + 1;
+    // Next sort_order = max in this category + 1 (append to the end).
+    const { data: last } = await admin
+      .from("lookups")
+      .select("sort_order")
+      .eq("category", category)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const sortOrder = ((last?.sort_order as number | undefined) ?? 0) + 1;
 
-  const { error } = await admin
-    .from("lookups")
-    .insert({ category, code, label, sort_order: sortOrder });
+    const { error } = await admin
+      .from("lookups")
+      .insert({ category, code, label, sort_order: sortOrder });
 
-  if (error) {
-    if (isUniqueViolation(error)) {
-      throw new Error(`"${code}" already exists in this list.`);
+    if (error) {
+      if (isUniqueViolation(error)) {
+        return { ok: false, error: `"${code}" already exists in this list.` };
+      }
+      return { ok: false, error: error.message };
     }
-    throw new Error(error.message);
-  }
 
-  refresh();
+    refresh();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /** Rename a row (label) and optionally change its code. */
@@ -94,97 +108,112 @@ export async function updateLookup(input: {
   id: string;
   label: string;
   code?: string;
-}): Promise<void> {
-  await requireMember();
+}): Promise<LookupResult> {
+  try {
+    await requireMember();
 
-  const label = input.label.trim();
-  if (!label) throw new Error("Please give this entry a label.");
+    const label = input.label.trim();
+    if (!label) return { ok: false, error: "Please give this entry a label." };
 
-  const patch: { label: string; code?: string } = { label };
-  if (input.code !== undefined) {
-    patch.code = requireSlug(input.code.trim() || label, "code");
-  }
-
-  const { error } = await db()
-    .from("lookups")
-    .update(patch)
-    .eq("id", input.id);
-
-  if (error) {
-    if (isUniqueViolation(error)) {
-      throw new Error(`"${patch.code}" already exists in this list.`);
+    const patch: { label: string; code?: string } = { label };
+    if (input.code !== undefined) {
+      patch.code = requireSlug(input.code.trim() || label, "code");
     }
-    throw new Error(error.message);
-  }
 
-  refresh();
+    const { error } = await db()
+      .from("lookups")
+      .update(patch)
+      .eq("id", input.id);
+
+    if (error) {
+      if (isUniqueViolation(error)) {
+        return { ok: false, error: `"${patch.code}" already exists in this list.` };
+      }
+      return { ok: false, error: error.message };
+    }
+
+    refresh();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /** Soft toggle: deactivate hides a row from app dropdowns; reactivate restores it. */
 export async function setLookupActive(
   id: string,
   active: boolean,
-): Promise<void> {
-  await requireMember();
+): Promise<LookupResult> {
+  try {
+    await requireMember();
 
-  const { error } = await db()
-    .from("lookups")
-    .update({ is_active: active })
-    .eq("id", id);
+    const { error } = await db()
+      .from("lookups")
+      .update({ is_active: active })
+      .eq("id", id);
 
-  if (error) throw new Error(error.message);
+    if (error) return { ok: false, error: error.message };
 
-  refresh();
+    refresh();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /** Move a row up/down within its category by swapping sort_order with its neighbor. */
 export async function moveLookup(
   id: string,
   direction: "up" | "down",
-): Promise<void> {
-  await requireMember();
+): Promise<LookupResult> {
+  try {
+    await requireMember();
 
-  const admin = db();
+    const admin = db();
 
-  const { data: row, error: rowErr } = await admin
-    .from("lookups")
-    .select("id, category, sort_order")
-    .eq("id", id)
-    .maybeSingle();
-  if (rowErr) throw new Error(rowErr.message);
-  if (!row) throw new Error("That entry no longer exists.");
+    const { data: row, error: rowErr } = await admin
+      .from("lookups")
+      .select("id, category, sort_order")
+      .eq("id", id)
+      .maybeSingle();
+    if (rowErr) return { ok: false, error: rowErr.message };
+    if (!row) return { ok: false, error: "That entry no longer exists." };
 
-  // All siblings in display order (includes inactive — they're shown and reorderable).
-  const { data: siblings, error: sibErr } = await admin
-    .from("lookups")
-    .select("id, sort_order")
-    .eq("category", row.category)
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true });
-  if (sibErr) throw new Error(sibErr.message);
+    // All siblings in display order (includes inactive — they're shown and reorderable).
+    const { data: siblings, error: sibErr } = await admin
+      .from("lookups")
+      .select("id, sort_order")
+      .eq("category", row.category)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true });
+    if (sibErr) return { ok: false, error: sibErr.message };
 
-  const ordered = (siblings ?? []) as Pick<Lookup, "id" | "sort_order">[];
-  const index = ordered.findIndex((s) => s.id === id);
-  const neighborIndex = direction === "up" ? index - 1 : index + 1;
-  if (index === -1 || neighborIndex < 0 || neighborIndex >= ordered.length) {
-    return; // already at the edge — nothing to do
+    const ordered = (siblings ?? []) as Pick<Lookup, "id" | "sort_order">[];
+    const index = ordered.findIndex((s) => s.id === id);
+    const neighborIndex = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || neighborIndex < 0 || neighborIndex >= ordered.length) {
+      return { ok: true }; // already at the edge — nothing to do
+    }
+
+    const current = ordered[index];
+    const neighbor = ordered[neighborIndex];
+
+    // Swap their sort_order values.
+    const { error: e1 } = await admin
+      .from("lookups")
+      .update({ sort_order: neighbor.sort_order })
+      .eq("id", current.id);
+    if (e1) return { ok: false, error: e1.message };
+
+    const { error: e2 } = await admin
+      .from("lookups")
+      .update({ sort_order: current.sort_order })
+      .eq("id", neighbor.id);
+    if (e2) return { ok: false, error: e2.message };
+
+    refresh();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
   }
-
-  const current = ordered[index];
-  const neighbor = ordered[neighborIndex];
-
-  // Swap their sort_order values.
-  const { error: e1 } = await admin
-    .from("lookups")
-    .update({ sort_order: neighbor.sort_order })
-    .eq("id", current.id);
-  if (e1) throw new Error(e1.message);
-
-  const { error: e2 } = await admin
-    .from("lookups")
-    .update({ sort_order: current.sort_order })
-    .eq("id", neighbor.id);
-  if (e2) throw new Error(e2.message);
-
-  refresh();
 }

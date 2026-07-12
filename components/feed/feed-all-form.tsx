@@ -24,7 +24,6 @@ import {
   resolveSnapshot,
   type AmountValue,
 } from "./amount-picker";
-import { actionErrorMessage } from "@/lib/action-error";
 
 /** Data the feed-all flow needs — fetched by the Server Component parent. */
 export type FeedAllData = {
@@ -202,27 +201,28 @@ export function FeedAllForm({
     }
 
     startTransition(async () => {
-      try {
-        const { count, treatWarningCats } = await applyMealTemplate({
-          template_id: templateId,
-          fed_at: fedAtIso,
-          rows: payload,
-        });
-        toast({ title: t.applied(count), variant: "success" });
-        if (treatWarningCats.length > 0) {
-          toast({
-            title: strings.feed.treatToast,
-            description: treatWarningCats.join(", "),
-            variant: "warning",
-          });
-        }
-        onDone?.();
-      } catch (err) {
+      const res = await applyMealTemplate({
+        template_id: templateId,
+        fed_at: fedAtIso,
+        rows: payload,
+      });
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, "Something went wrong"),
+          title: "Something went wrong",
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: t.applied(res.count), variant: "success" });
+      if (res.treatWarningCats.length > 0) {
+        toast({
+          title: strings.feed.treatToast,
+          description: res.treatWarningCats.join(", "),
+          variant: "warning",
+        });
+      }
+      onDone?.();
     });
   }
 

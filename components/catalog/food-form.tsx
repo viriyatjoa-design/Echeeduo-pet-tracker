@@ -206,20 +206,21 @@ export function FoodForm({
       notes,
     };
     startTransition(async () => {
-      try {
-        if (isEdit) await updateFood(food!.id, input);
-        else await createFood(input);
+      const res = isEdit
+        ? await updateFood(food!.id, input)
+        : await createFood(input);
+      if (!res.ok) {
         toast({
-          title: isEdit ? "Food updated" : "Food added",
-          variant: "success",
-        });
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
+          title: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({
+        title: isEdit ? "Food updated" : "Food added",
+        variant: "success",
+      });
+      setOpen(false);
     });
   }
 

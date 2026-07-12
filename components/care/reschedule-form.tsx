@@ -17,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { rescheduleCareEvent } from "@/lib/actions/care";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   title: "Reschedule",
@@ -56,16 +55,13 @@ export function RescheduleForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      try {
-        await rescheduleCareEvent(id, date, time || null);
-        toast({ title: t.saved, variant: "success" });
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = await rescheduleCareEvent(id, date, time || null);
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({ title: t.saved, variant: "success" });
+      setOpen(false);
     });
   }
 

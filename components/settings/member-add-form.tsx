@@ -8,7 +8,6 @@ import { strings } from "@/lib/strings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   email: "Email",
@@ -32,16 +31,18 @@ export function MemberAddForm() {
     if (pending) return;
     setPending(true);
     try {
-      await addMember({ email, display_name: name });
+      const res = await addMember({ email, display_name: name });
+      if (!res.ok) {
+        toast({
+          title: strings.auth.genericError,
+          description: res.error || undefined,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: t.added, variant: "success" });
       setEmail("");
       setName("");
-    } catch (err) {
-      toast({
-        title: strings.auth.genericError,
-        description: actionErrorMessage(err, "") || undefined,
-        variant: "destructive",
-      });
     } finally {
       setPending(false);
     }

@@ -26,7 +26,6 @@ import { createMedCourse } from "@/lib/actions/care";
 import type { ConsumableOption } from "@/components/care/care-event-form";
 import type { Cat } from "@/lib/types";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_ITEM = "__none__";
 
@@ -109,25 +108,22 @@ export function MedCourseForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      try {
-        await createMedCourse({
-          cat_id: catId,
-          medicine_name: medicine,
-          start_date: startDate,
-          duration_days: duration,
-          times,
-          ...(consumeItemId !== NO_ITEM
-            ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
-            : {}),
-        });
-        toast({ title: t.saved, variant: "success" });
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = await createMedCourse({
+        cat_id: catId,
+        medicine_name: medicine,
+        start_date: startDate,
+        duration_days: duration,
+        times,
+        ...(consumeItemId !== NO_ITEM
+          ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
+          : {}),
+      });
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({ title: t.saved, variant: "success" });
+      setOpen(false);
     });
   }
 

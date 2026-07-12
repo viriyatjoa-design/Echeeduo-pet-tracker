@@ -110,23 +110,22 @@ export function LitterForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      let id: string;
-      try {
-        id = await logLitter({
-          cat_id: catId === HOUSEHOLD ? null : catId,
-          urine,
-          stool,
-          stool_consistency_id: stool && consistencyId ? consistencyId : null,
-          notes,
-        });
-      } catch (err) {
+      const res = await logLitter({
+        cat_id: catId === HOUSEHOLD ? null : catId,
+        urine,
+        stool,
+        stool_consistency_id: stool && consistencyId ? consistencyId : null,
+        notes,
+      });
+      if (!res.ok) {
         toast({
           title: t.error,
-          description: actionErrorMessage(err, ""),
+          description: res.error,
           variant: "destructive",
         });
         return;
       }
+      const id = res.id;
 
       // Photo-then-id: the row exists, now attach the (optional) photo to it.
       // The row is saved either way — an upload failure must still close the

@@ -28,7 +28,6 @@ import { createCareEvent, logPastCareEvent } from "@/lib/actions/care";
 import { relativeDay, todayInTz } from "@/lib/time";
 import type { Cat, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_ITEM = "__none__";
 
@@ -112,49 +111,50 @@ export function CareEventForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      try {
-        const consume =
-          consumeItemId !== NO_ITEM
-            ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
-            : {};
-        if (alreadyDone) {
-          const { nextDueDate } = await logPastCareEvent({
-            cat_id: catId,
-            event_type_id: typeId,
-            title,
-            done_date: doneDate,
-            interval_days: interval || null,
-            vet_name: vet || null,
-            notes: notes || null,
-            ...consume,
-          });
-          toast({
-            title: nextDueDate
-              ? t.savedPastNext(relativeDay(nextDueDate))
-              : t.savedPast,
-            variant: "success",
-          });
-        } else {
-          await createCareEvent({
-            cat_id: catId,
-            event_type_id: typeId,
-            title,
-            due_date: dueDate || null,
-            due_time: dueTime || null,
-            interval_days: interval || null,
-            vet_name: vet || null,
-            notes: notes || null,
-            ...consume,
-          });
-          toast({ title: t.saved, variant: "success" });
-        }
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
+      const consume =
+        consumeItemId !== NO_ITEM
+          ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
+          : {};
+      if (alreadyDone) {
+        const res = await logPastCareEvent({
+          cat_id: catId,
+          event_type_id: typeId,
+          title,
+          done_date: doneDate,
+          interval_days: interval || null,
+          vet_name: vet || null,
+          notes: notes || null,
+          ...consume,
         });
+        if (!res.ok) {
+          toast({ title: res.error, variant: "destructive" });
+          return;
+        }
+        toast({
+          title: res.nextDueDate
+            ? t.savedPastNext(relativeDay(res.nextDueDate))
+            : t.savedPast,
+          variant: "success",
+        });
+      } else {
+        const res = await createCareEvent({
+          cat_id: catId,
+          event_type_id: typeId,
+          title,
+          due_date: dueDate || null,
+          due_time: dueTime || null,
+          interval_days: interval || null,
+          vet_name: vet || null,
+          notes: notes || null,
+          ...consume,
+        });
+        if (!res.ok) {
+          toast({ title: res.error, variant: "destructive" });
+          return;
+        }
+        toast({ title: t.saved, variant: "success" });
       }
+      setOpen(false);
     });
   }
 

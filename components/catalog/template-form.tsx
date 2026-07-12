@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { createTemplate, updateTemplate } from "@/lib/actions/meal-templates";
 import type { MealTemplate } from "@/lib/types";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newTemplate: "New template",
@@ -53,20 +52,18 @@ export function TemplateForm({ template }: { template?: MealTemplate }) {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      try {
-        if (isEdit) await updateTemplate(template!.id, { name, sort_order: sortOrder });
-        else await createTemplate({ name, sort_order: sortOrder });
-        toast({
-          title: isEdit ? "Template updated" : "Template created",
-          variant: "success",
-        });
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = isEdit
+        ? await updateTemplate(template!.id, { name, sort_order: sortOrder })
+        : await createTemplate({ name, sort_order: sortOrder });
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({
+        title: isEdit ? "Template updated" : "Template created",
+        variant: "success",
+      });
+      setOpen(false);
     });
   }
 

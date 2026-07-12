@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { logWater } from "@/lib/actions/observation";
 import type { Cat } from "@/lib/types";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   water: "Water",
@@ -69,16 +68,18 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
     setPendingPreset(preset ?? null);
     startTransition(async () => {
       try {
-        await logWater({ cat_id: selected, ml });
+        const res = await logWater({ cat_id: selected, ml });
+        if (!res.ok) {
+          toast({
+            title: t.error,
+            description: res.error || undefined,
+            variant: "destructive",
+          });
+          return;
+        }
         toast({ title: t.saved(ml, name), variant: "success" });
         setCustom("");
         router.refresh();
-      } catch (err) {
-        toast({
-          title: t.error,
-          description: actionErrorMessage(err, "") || undefined,
-          variant: "destructive",
-        });
       } finally {
         setPendingPreset(null);
       }

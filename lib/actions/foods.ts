@@ -94,27 +94,48 @@ function revalidate() {
   revalidatePath("/");
 }
 
-export async function createFood(input: FoodInput) {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
+/**
+ * Result objects instead of thrown errors: in production a thrown Server Action
+ * error has its message stripped and replaced by a generic banner, so mutations
+ * return their failure text for the caller to surface.
+ */
+export type FoodResult = { ok: true } | { ok: false; error: string };
 
-  const row = normalize(input);
-  const { error } = await db().from("food_catalog").insert(row);
-  if (error) throw new Error(error.message);
-
-  revalidate();
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
 }
 
-export async function updateFood(id: string, input: FoodInput) {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
-  if (!id) throw new Error("Missing food id.");
+export async function createFood(input: FoodInput): Promise<FoodResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
 
-  const row = normalize(input);
-  const { error } = await db().from("food_catalog").update(row).eq("id", id);
-  if (error) throw new Error(error.message);
+    const row = normalize(input);
+    const { error } = await db().from("food_catalog").insert(row);
+    if (error) return { ok: false, error: error.message };
 
-  revalidate();
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
+}
+
+export async function updateFood(id: string, input: FoodInput): Promise<FoodResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
+    if (!id) return { ok: false, error: "Missing food id." };
+
+    const row = normalize(input);
+    const { error } = await db().from("food_catalog").update(row).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 export async function setFoodActive(id: string, active: boolean) {

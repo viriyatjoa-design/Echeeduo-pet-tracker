@@ -29,7 +29,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newCat: "New cat",
@@ -151,19 +150,22 @@ export function CatForm({
 
     setPending(true);
     try {
-      if (cat) await updateCat(cat.id, input);
-      else await createCat(input);
+      const res = cat
+        ? await updateCat(cat.id, input)
+        : await createCat(input);
+      if (!res.ok) {
+        toast({
+          title: strings.auth.genericError,
+          description: res.error || undefined,
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: isEdit ? t.updatedToast : t.createdToast,
         variant: "success",
       });
       setOpen(false);
-    } catch (err) {
-      toast({
-        title: strings.auth.genericError,
-        description: actionErrorMessage(err, "") || undefined,
-        variant: "destructive",
-      });
     } finally {
       setPending(false);
     }

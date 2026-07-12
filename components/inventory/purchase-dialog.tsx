@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { purchaseStock } from "@/lib/actions/inventory";
 import type { InventoryItemView } from "@/lib/inventory-queries";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   trigger: "Purchase",
@@ -56,21 +55,22 @@ export function PurchaseDialog({ item }: { item: InventoryItemView }) {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      try {
-        await purchaseStock({
-          item_id: item.id,
-          qty: Number(qty),
-          unit_cost: cost === "" ? null : Number(cost),
-          notes: notes === "" ? null : notes,
-        });
-        toast({ title: t.logged, variant: "success" });
-        setOpen(false);
-      } catch (err) {
+      const res = await purchaseStock({
+        item_id: item.id,
+        qty: Number(qty),
+        unit_cost: cost === "" ? null : Number(cost),
+        notes: notes === "" ? null : notes,
+      });
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, t.wrong),
+          title: t.wrong,
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: t.logged, variant: "success" });
+      setOpen(false);
     });
   }
 

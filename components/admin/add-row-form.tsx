@@ -38,17 +38,17 @@ export function AddRowForm({ category }: { category: string }) {
       return;
     }
     startTransition(async () => {
-      try {
-        await createLookup({ category, code: code.trim(), label: nextLabel });
-        setLabel("");
-        setCode("");
-      } catch (err) {
+      const res = await createLookup({ category, code: code.trim(), label: nextLabel });
+      if (!res.ok) {
         toast({
           variant: "destructive",
           title: t.addFailed,
-          description: (err as Error).message,
+          description: res.error,
         });
+        return;
       }
+      setLabel("");
+      setCode("");
     });
   }
 

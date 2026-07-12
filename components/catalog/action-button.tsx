@@ -21,7 +21,9 @@ export function ActionButton({
   className,
   disabled,
 }: {
-  action: () => Promise<void>;
+  // Accepts both legacy throwing actions and the result-object pattern, so a
+  // failed result surfaces its real message instead of a false success toast.
+  action: () => Promise<void | { ok: boolean; error?: string }>;
   children: React.ReactNode;
   confirmText?: string;
   successText?: string;
@@ -40,7 +42,14 @@ export function ActionButton({
         if (confirmText && !window.confirm(confirmText)) return;
         startTransition(async () => {
           try {
-            await action();
+            const res = await action();
+            if (res && res.ok === false) {
+              toast({
+                title: res.error || "Something went wrong",
+                variant: "destructive",
+              });
+              return;
+            }
             if (successText) toast({ title: successText, variant: "success" });
           } catch (err) {
             toast({

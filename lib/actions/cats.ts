@@ -49,27 +49,49 @@ function revalidateAll() {
   revalidatePath("/", "layout");
 }
 
-export async function createCat(input: CatInput) {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
+/**
+ * Result envelope so thrown errors survive Next.js production (which strips a
+ * Server Action's Error message). Mirrors the pattern in lib/actions/ai.ts.
+ */
+export type CatActionResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
-  const { error } = await db().from("cats").insert(normalize(input));
-  if (error) throw new Error(error.message);
-
-  revalidateAll();
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
 }
 
-export async function updateCat(id: UUID, input: CatInput) {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
+export async function createCat(input: CatInput): Promise<CatActionResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
 
-  const { error } = await db()
-    .from("cats")
-    .update(normalize(input))
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+    const { error } = await db().from("cats").insert(normalize(input));
+    if (error) return { ok: false, error: error.message };
 
-  revalidateAll();
+    revalidateAll();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
+}
+
+export async function updateCat(id: UUID, input: CatInput): Promise<CatActionResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
+
+    const { error } = await db()
+      .from("cats")
+      .update(normalize(input))
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+
+    revalidateAll();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 export async function setCatActive(id: UUID, active: boolean) {

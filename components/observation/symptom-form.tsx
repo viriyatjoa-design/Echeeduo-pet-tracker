@@ -30,7 +30,6 @@ import { logSymptom } from "@/lib/actions/observation";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { strings } from "@/lib/strings";
 import type { Cat, Lookup } from "@/lib/types";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newSymptom: "Symptom",
@@ -100,22 +99,21 @@ export function SymptomForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      let id: string;
-      try {
-        id = await logSymptom({
-          cat_id: catId,
-          symptom_type_id: typeId,
-          severity,
-          notes,
-        });
-      } catch (err) {
+      const res = await logSymptom({
+        cat_id: catId,
+        symptom_type_id: typeId,
+        severity,
+        notes,
+      });
+      if (!res.ok) {
         toast({
           title: t.error,
-          description: actionErrorMessage(err, "") || undefined,
+          description: res.error || undefined,
           variant: "destructive",
         });
         return;
       }
+      const id = res.id;
 
       // Photo-then-id: attach the optional photo to the freshly-created row.
       // The row is saved either way — an upload failure must still close the

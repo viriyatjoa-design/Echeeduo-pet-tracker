@@ -15,6 +15,7 @@ import {
   updateLookup,
   setLookupActive,
   moveLookup,
+  type LookupResult,
 } from "@/lib/actions/lookups";
 
 const t = {
@@ -55,18 +56,22 @@ export function LookupRow({
     }
   }, [lookup.label, lookup.code, editing]);
 
-  function run(fn: () => Promise<void>, failTitle: string, onOk?: () => void) {
+  function run(
+    fn: () => Promise<LookupResult>,
+    failTitle: string,
+    onOk?: () => void,
+  ) {
     startTransition(async () => {
-      try {
-        await fn();
-        onOk?.();
-      } catch (err) {
+      const res = await fn();
+      if (!res.ok) {
         toast({
           variant: "destructive",
           title: failTitle,
-          description: (err as Error).message,
+          description: res.error,
         });
+        return;
       }
+      onOk?.();
     });
   }
 

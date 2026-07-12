@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { completeCareEvent } from "@/lib/actions/care";
 import { relativeDay, todayInTz } from "@/lib/time";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   done: "Marked done",
@@ -47,19 +46,16 @@ export function CompleteButton({
       if (!window.confirm(t.earlyConfirm(relativeDay(dueDate)))) return;
     }
     startTransition(async () => {
-      try {
-        const { nextDueDate } = await completeCareEvent(id);
-        toast({
-          title: t.done,
-          description: nextDueDate ? t.nextUp(relativeDay(nextDueDate)) : undefined,
-          variant: "success",
-        });
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = await completeCareEvent(id);
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({
+        title: t.done,
+        description: res.nextDueDate ? t.nextUp(relativeDay(res.nextDueDate)) : undefined,
+        variant: "success",
+      });
     });
   }
 

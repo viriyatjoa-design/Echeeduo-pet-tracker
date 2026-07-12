@@ -22,39 +22,50 @@ function clean(v: string | null | undefined): string | null {
   return s.length ? s : null;
 }
 
-export async function logWeight(input: LogWeightInput) {
-  const me = await getCurrentAppUser();
-  if (!me) throw new Error("Unauthorized");
+export type LogWeightResult = { ok: true } | { ok: false; error: string };
 
-  if (!input.cat_id) throw new Error("Missing cat.");
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : "Something went wrong.";
+}
 
-  const grams = Math.round(Number(input.weight_grams));
-  if (!Number.isFinite(grams) || grams <= 0) {
-    throw new Error("Weight must be greater than 0.");
-  }
+export async function logWeight(input: LogWeightInput): Promise<LogWeightResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
 
-  let bcs: number | null = null;
-  if (input.bcs !== null && input.bcs !== undefined && String(input.bcs).trim() !== "") {
-    const b = Math.round(Number(input.bcs));
-    if (!Number.isFinite(b) || b < 1 || b > 9) {
-      throw new Error("Body condition score must be between 1 and 9.");
+    if (!input.cat_id) return { ok: false, error: "Missing cat." };
+
+    const grams = Math.round(Number(input.weight_grams));
+    if (!Number.isFinite(grams) || grams <= 0) {
+      return { ok: false, error: "Weight must be greater than 0." };
     }
-    bcs = b;
+
+    let bcs: number | null = null;
+    if (input.bcs !== null && input.bcs !== undefined && String(input.bcs).trim() !== "") {
+      const b = Math.round(Number(input.bcs));
+      if (!Number.isFinite(b) || b < 1 || b > 9) {
+        return { ok: false, error: "Body condition score must be between 1 and 9." };
+      }
+      bcs = b;
+    }
+
+    const measured_at = clean(input.measured_at);
+    if (!measured_at) return { ok: false, error: "Measurement date is required." };
+
+    const { error } = await db().from("weight_logs").insert({
+      cat_id: input.cat_id,
+      weight_grams: grams,
+      bcs,
+      measured_at,
+      notes: clean(input.notes),
+      created_by: me.id,
+    });
+    if (error) return { ok: false, error: error.message };
+
+    // Revalidate the dashboard and every /cats/[id] profile in one shot.
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
   }
-
-  const measured_at = clean(input.measured_at);
-  if (!measured_at) throw new Error("Measurement date is required.");
-
-  const { error } = await db().from("weight_logs").insert({
-    cat_id: input.cat_id,
-    weight_grams: grams,
-    bcs,
-    measured_at,
-    notes: clean(input.notes),
-    created_by: me.id,
-  });
-  if (error) throw new Error(error.message);
-
-  // Revalidate the dashboard and every /cats/[id] profile in one shot.
-  revalidatePath("/", "layout");
 }

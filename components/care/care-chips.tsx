@@ -8,7 +8,6 @@ import { relativeDay } from "@/lib/time";
 import { completeCareEvent } from "@/lib/actions/care";
 import { cn } from "@/lib/utils";
 import type { CareEvent } from "@/lib/types";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   done: "Marked done",
@@ -63,19 +62,16 @@ function Chip({
 
   function complete() {
     startTransition(async () => {
-      try {
-        const { nextDueDate } = await completeCareEvent(event.id);
-        toast({
-          title: t.done,
-          description: nextDueDate ? t.nextUp(relativeDay(nextDueDate)) : undefined,
-          variant: "success",
-        });
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = await completeCareEvent(event.id);
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({
+        title: t.done,
+        description: res.nextDueDate ? t.nextUp(relativeDay(res.nextDueDate)) : undefined,
+        variant: "success",
+      });
     });
   }
 

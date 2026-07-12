@@ -26,7 +26,6 @@ import { useToast } from "@/hooks/use-toast";
 import { createItem, updateItem } from "@/lib/actions/inventory";
 import type { InventoryItem, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_FOOD = "__none__";
 
@@ -134,23 +133,22 @@ export function ItemForm({
       notes: notes === "" ? null : notes,
     };
     startTransition(async () => {
-      try {
-        if (isEdit) {
-          await updateItem(item!.id, shared); // no quantity — see docstring
-        } else {
-          await createItem({
+      const res = isEdit
+        ? await updateItem(item!.id, shared) // no quantity — see docstring
+        : await createItem({
             ...shared,
             quantity: quantity === "" ? null : Number(quantity),
           });
-        }
-        toast({ title: isEdit ? t.saved : t.added, variant: "success" });
-        setOpen(false);
-      } catch (err) {
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, t.wrong),
+          title: t.wrong,
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: isEdit ? t.saved : t.added, variant: "success" });
+      setOpen(false);
     });
   }
 

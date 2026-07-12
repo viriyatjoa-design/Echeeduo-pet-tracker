@@ -19,7 +19,6 @@ import {
   resolveSnapshot,
   type AmountValue,
 } from "./amount-picker";
-import { actionErrorMessage } from "@/lib/action-error";
 
 /** Everything the quick-feed flow needs — fetched by the Server Component parent. */
 export type FeedData = {
@@ -131,30 +130,31 @@ export function QuickFeed({
       selectedFood.unit_id ? unitLabel.get(selectedFood.unit_id) ?? null : null,
     );
     startTransition(async () => {
-      try {
-        const { treatWarning } = await logFeed({
-          cat_id: catId,
-          food_id: selectedFood.id,
-          grams: snap.grams,
-          qty: snap.qty,
-          unit_label: snap.unit_label,
-          fed_at: fedAtIso,
-        });
-        toast({ title: strings.feed.saved, variant: "success" });
-        if (treatWarning) {
-          toast({ title: strings.feed.treatToast, variant: "warning" });
-        }
-        setFoodId("");
-        setAmount(null);
-        setWhenMode("now");
-        setFedAtLocal("");
-        onDone?.();
-      } catch (err) {
+      const res = await logFeed({
+        cat_id: catId,
+        food_id: selectedFood.id,
+        grams: snap.grams,
+        qty: snap.qty,
+        unit_label: snap.unit_label,
+        fed_at: fedAtIso,
+      });
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, "Something went wrong"),
+          title: "Something went wrong",
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: strings.feed.saved, variant: "success" });
+      if (res.treatWarning) {
+        toast({ title: strings.feed.treatToast, variant: "warning" });
+      }
+      setFoodId("");
+      setAmount(null);
+      setWhenMode("now");
+      setFedAtLocal("");
+      onDone?.();
     });
   }
 

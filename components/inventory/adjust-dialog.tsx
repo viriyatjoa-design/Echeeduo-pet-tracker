@@ -26,7 +26,6 @@ import { adjustStock } from "@/lib/actions/inventory";
 import type { InventoryItemView } from "@/lib/inventory-queries";
 import { strings } from "@/lib/strings";
 import { cn } from "@/lib/utils";
-import { actionErrorMessage } from "@/lib/action-error";
 
 type Reason = "adjustment" | "expired";
 
@@ -70,21 +69,22 @@ export function AdjustDialog({ item }: { item: InventoryItemView }) {
     e.preventDefault();
     const magnitude = Math.abs(Number(amount));
     startTransition(async () => {
-      try {
-        await adjustStock({
-          item_id: item.id,
-          delta: sign === "remove" ? -magnitude : magnitude,
-          reason,
-          notes: notes === "" ? null : notes,
-        });
-        toast({ title: t.adjusted, variant: "success" });
-        setOpen(false);
-      } catch (err) {
+      const res = await adjustStock({
+        item_id: item.id,
+        delta: sign === "remove" ? -magnitude : magnitude,
+        reason,
+        notes: notes === "" ? null : notes,
+      });
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, t.wrong),
+          title: t.wrong,
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: t.adjusted, variant: "success" });
+      setOpen(false);
     });
   }
 

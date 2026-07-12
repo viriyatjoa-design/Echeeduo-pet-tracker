@@ -28,7 +28,6 @@ import { logWeight } from "@/lib/actions/weight";
 import { todayInTz } from "@/lib/time";
 import { strings } from "@/lib/strings";
 import type { UUID } from "@/lib/types";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_BCS = "__none__";
 const BCS_SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
@@ -98,22 +97,23 @@ export function WeightForm({
       return;
     }
     startTransition(async () => {
-      try {
-        await logWeight({
-          cat_id: catId,
-          weight_grams: Math.round(kgNum * 1000),
-          bcs: bcs === NO_BCS ? null : Number(bcs),
-          measured_at: measuredAt,
-          notes,
-        });
-        toast({ title: t.saved, variant: "success" });
-        setOpen(false);
-      } catch (err) {
+      const res = await logWeight({
+        cat_id: catId,
+        weight_grams: Math.round(kgNum * 1000),
+        bcs: bcs === NO_BCS ? null : Number(bcs),
+        measured_at: measuredAt,
+        notes,
+      });
+      if (!res.ok) {
         toast({
-          title: actionErrorMessage(err, "Something went wrong"),
+          title: "Something went wrong",
+          description: res.error,
           variant: "destructive",
         });
+        return;
       }
+      toast({ title: t.saved, variant: "success" });
+      setOpen(false);
     });
   }
 

@@ -29,7 +29,6 @@ import {
 import { gramsFromPortion, kcalFromGrams, round1 } from "@/lib/kcal";
 import type { Cat, Food, MealTemplateItem } from "@/lib/types";
 import { strings } from "@/lib/strings";
-import { actionErrorMessage } from "@/lib/action-error";
 
 const PORTIONS: { value: number; label: string }[] = [
   { value: 0.25, label: "¼" },
@@ -136,16 +135,13 @@ export function TemplateItemForm({
       grams: hasUnit ? null : Number(grams),
     };
     startTransition(async () => {
-      try {
-        await upsertTemplateItem(input);
-        toast({ title: isEdit ? "Item updated" : "Item added", variant: "success" });
-        setOpen(false);
-      } catch (err) {
-        toast({
-          title: actionErrorMessage(err, "Something went wrong"),
-          variant: "destructive",
-        });
+      const res = await upsertTemplateItem(input);
+      if (!res.ok) {
+        toast({ title: res.error, variant: "destructive" });
+        return;
       }
+      toast({ title: isEdit ? "Item updated" : "Item added", variant: "success" });
+      setOpen(false);
     });
   }
 

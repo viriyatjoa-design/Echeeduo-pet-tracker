@@ -84,6 +84,25 @@ function fail(
   throw new Error(error?.message ?? t.genericFail);
 }
 
+/**
+ * Result type for the mutating actions (SPEC §11). Next.js strips thrown Error
+ * messages from Server Actions in production, so these actions RETURN their
+ * outcome instead of throwing — mirror lib/actions/ai.ts.
+ */
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** Map a Supabase failure to the friendly string (setup message if 003 missing). */
+function failMsg(
+  error: { code?: string; message?: string } | null | undefined,
+): string {
+  if (isTableMissing(error)) return t.notSetUp;
+  return error?.message ?? t.genericFail;
+}
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : t.genericFail;
+}
+
 async function requireMe() {
   const me = await getCurrentAppUser();
   if (!me) throw new Error(t.unauthorized);
@@ -122,73 +141,80 @@ export async function createItem(input: {
   reorder_days?: number | null;
   expiry?: string | null;
   notes?: string | null;
-}): Promise<void> {
-  const me = await requireMe();
+}): Promise<ActionResult> {
+  try {
+    const me = await requireMe();
 
-  const name = clean(input.name);
-  if (!name) throw new Error(t.nameRequired);
-  if (!input.item_type_id) throw new Error(t.typeRequired);
-  if (!input.unit_id) throw new Error(t.unitRequired);
+    const name = clean(input.name);
+    if (!name) return { ok: false, error: t.nameRequired };
+    if (!input.item_type_id) return { ok: false, error: t.typeRequired };
+    if (!input.unit_id) return { ok: false, error: t.unitRequired };
 
-  const rawQty = numOrNull(input.quantity) ?? 0;
-  if (rawQty < 0) throw new Error(t.qtyNotNegative);
-  const quantity = round1(rawQty);
+    const rawQty = numOrNull(input.quantity) ?? 0;
+    if (rawQty < 0) return { ok: false, error: t.qtyNotNegative };
+    const quantity = round1(rawQty);
 
-  const cost = idrOrNull(input.cost_per_unit);
-  const reorderRaw = numOrNull(input.reorder_days);
-  const reorder = reorderRaw == null ? null : Math.round(reorderRaw);
-  if (reorder != null && reorder < 1) throw new Error(t.reorderPositive);
-
-  const database = db();
-  // Resolve the ledger reason BEFORE creating the item so a lookup failure
-  // can't leave an item without its opening movement. Opening stock is an
-  // 'adjustment', not a 'purchase' — seeding a half-used bag must not count
-  // toward this month's spending (getMonthlySpend counts purchases only).
-  const openingReasonId =
-    quantity > 0 ? await stockReasonId("adjustment") : null;
-  if (quantity > 0 && !openingReasonId) {
-    throw new Error(t.notSetUp);
-  }
-  const { data: item, error } = await database
-    .from("inventory_items")
-    .insert({
-      name,
-      item_type_id: input.item_type_id,
-      unit_id: input.unit_id,
-      food_id: clean(input.food_id),
-      quantity,
-      cost_per_unit: cost,
-      reorder_days: reorder,
-      expiry: clean(input.expiry),
-      notes: clean(input.notes),
-      created_by: me.id,
-    })
-    .select("id")
-    .single();
-  if (error || !item) fail(error);
-
-  // Opening stock enters through the ledger too, so history stays consistent.
-  if (quantity > 0) {
-    const { error: moveErr } = await database.from("stock_movements").insert({
-      item_id: item.id,
-      delta: quantity,
-      reason_id: openingReasonId,
-      unit_cost: null,
-      notes: t.openingStock,
-      created_by: me.id,
-    });
-    if (moveErr) {
-      // Best-effort rollback: hide the half-created item rather than leave an
-      // item whose quantity has no ledger entry.
-      await database
-        .from("inventory_items")
-        .update({ is_active: false })
-        .eq("id", item.id);
-      fail(moveErr);
+    const cost = idrOrNull(input.cost_per_unit);
+    const reorderRaw = numOrNull(input.reorder_days);
+    const reorder = reorderRaw == null ? null : Math.round(reorderRaw);
+    if (reorder != null && reorder < 1) {
+      return { ok: false, error: t.reorderPositive };
     }
-  }
 
-  revalidate();
+    const database = db();
+    // Resolve the ledger reason BEFORE creating the item so a lookup failure
+    // can't leave an item without its opening movement. Opening stock is an
+    // 'adjustment', not a 'purchase' — seeding a half-used bag must not count
+    // toward this month's spending (getMonthlySpend counts purchases only).
+    const openingReasonId =
+      quantity > 0 ? await stockReasonId("adjustment") : null;
+    if (quantity > 0 && !openingReasonId) {
+      return { ok: false, error: t.notSetUp };
+    }
+    const { data: item, error } = await database
+      .from("inventory_items")
+      .insert({
+        name,
+        item_type_id: input.item_type_id,
+        unit_id: input.unit_id,
+        food_id: clean(input.food_id),
+        quantity,
+        cost_per_unit: cost,
+        reorder_days: reorder,
+        expiry: clean(input.expiry),
+        notes: clean(input.notes),
+        created_by: me.id,
+      })
+      .select("id")
+      .single();
+    if (error || !item) return { ok: false, error: failMsg(error) };
+
+    // Opening stock enters through the ledger too, so history stays consistent.
+    if (quantity > 0) {
+      const { error: moveErr } = await database.from("stock_movements").insert({
+        item_id: item.id,
+        delta: quantity,
+        reason_id: openingReasonId,
+        unit_cost: null,
+        notes: t.openingStock,
+        created_by: me.id,
+      });
+      if (moveErr) {
+        // Best-effort rollback: hide the half-created item rather than leave an
+        // item whose quantity has no ledger entry.
+        await database
+          .from("inventory_items")
+          .update({ is_active: false })
+          .eq("id", item.id);
+        return { ok: false, error: failMsg(moveErr) };
+      }
+    }
+
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /**
@@ -209,50 +235,57 @@ export async function updateItem(
     expiry?: string | null;
     notes?: string | null;
   },
-): Promise<void> {
-  await requireMe();
-  if (!id) throw new Error(t.itemNotFound);
+): Promise<ActionResult> {
+  try {
+    await requireMe();
+    if (!id) return { ok: false, error: t.itemNotFound };
 
-  const patch: Record<string, unknown> = {};
-  if (input.name !== undefined) {
-    const name = clean(input.name);
-    if (!name) throw new Error(t.nameRequired);
-    patch.name = name;
-  }
-  if (input.item_type_id !== undefined) {
-    if (!input.item_type_id) throw new Error(t.typeRequired);
-    patch.item_type_id = input.item_type_id;
-  }
-  if (input.unit_id !== undefined) {
-    if (!input.unit_id) throw new Error(t.unitRequired);
-    patch.unit_id = input.unit_id;
-  }
-  if (input.food_id !== undefined) patch.food_id = clean(input.food_id);
-  if (input.quantity !== undefined) {
-    const q = numOrNull(input.quantity);
-    if (q == null || q < 0) throw new Error(t.qtyNotNegative);
-    patch.quantity = round1(q);
-  }
-  if (input.cost_per_unit !== undefined) {
-    patch.cost_per_unit = idrOrNull(input.cost_per_unit);
-  }
-  if (input.reorder_days !== undefined) {
-    const raw = numOrNull(input.reorder_days);
-    const reorder = raw == null ? null : Math.round(raw);
-    if (reorder != null && reorder < 1) throw new Error(t.reorderPositive);
-    patch.reorder_days = reorder;
-  }
-  if (input.expiry !== undefined) patch.expiry = clean(input.expiry);
-  if (input.notes !== undefined) patch.notes = clean(input.notes);
-  if (Object.keys(patch).length === 0) return;
+    const patch: Record<string, unknown> = {};
+    if (input.name !== undefined) {
+      const name = clean(input.name);
+      if (!name) return { ok: false, error: t.nameRequired };
+      patch.name = name;
+    }
+    if (input.item_type_id !== undefined) {
+      if (!input.item_type_id) return { ok: false, error: t.typeRequired };
+      patch.item_type_id = input.item_type_id;
+    }
+    if (input.unit_id !== undefined) {
+      if (!input.unit_id) return { ok: false, error: t.unitRequired };
+      patch.unit_id = input.unit_id;
+    }
+    if (input.food_id !== undefined) patch.food_id = clean(input.food_id);
+    if (input.quantity !== undefined) {
+      const q = numOrNull(input.quantity);
+      if (q == null || q < 0) return { ok: false, error: t.qtyNotNegative };
+      patch.quantity = round1(q);
+    }
+    if (input.cost_per_unit !== undefined) {
+      patch.cost_per_unit = idrOrNull(input.cost_per_unit);
+    }
+    if (input.reorder_days !== undefined) {
+      const raw = numOrNull(input.reorder_days);
+      const reorder = raw == null ? null : Math.round(raw);
+      if (reorder != null && reorder < 1) {
+        return { ok: false, error: t.reorderPositive };
+      }
+      patch.reorder_days = reorder;
+    }
+    if (input.expiry !== undefined) patch.expiry = clean(input.expiry);
+    if (input.notes !== undefined) patch.notes = clean(input.notes);
+    if (Object.keys(patch).length === 0) return { ok: true };
 
-  const { error } = await db()
-    .from("inventory_items")
-    .update(patch)
-    .eq("id", id);
-  if (error) fail(error);
+    const { error } = await db()
+      .from("inventory_items")
+      .update(patch)
+      .eq("id", id);
+    if (error) return { ok: false, error: failMsg(error) };
 
-  revalidate();
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /** Soft show/hide (SPEC: never hard-delete). */
@@ -281,59 +314,66 @@ export async function purchaseStock(input: {
   qty: number;
   unit_cost?: number | null;
   notes?: string | null;
-}): Promise<void> {
-  const me = await requireMe();
+}): Promise<ActionResult> {
+  try {
+    const me = await requireMe();
 
-  const qty = round1(Number(input.qty));
-  if (!Number.isFinite(qty) || qty <= 0) throw new Error(t.qtyPositive);
-  const unitCost = idrOrNull(input.unit_cost);
+    const qty = round1(Number(input.qty));
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return { ok: false, error: t.qtyPositive };
+    }
+    const unitCost = idrOrNull(input.unit_cost);
 
-  const database = db();
-  const { data: item, error: itemErr } = await database
-    .from("inventory_items")
-    .select("id, quantity, cost_per_unit")
-    .eq("id", input.item_id)
-    .maybeSingle();
-  if (itemErr) fail(itemErr);
-  if (!item) throw new Error(t.itemNotFound);
+    const database = db();
+    const { data: item, error: itemErr } = await database
+      .from("inventory_items")
+      .select("id, quantity, cost_per_unit")
+      .eq("id", input.item_id)
+      .maybeSingle();
+    if (itemErr) return { ok: false, error: failMsg(itemErr) };
+    if (!item) return { ok: false, error: t.itemNotFound };
 
-  const snapshot =
-    unitCost ?? (item.cost_per_unit == null ? null : Math.round(Number(item.cost_per_unit)));
+    const snapshot =
+      unitCost ?? (item.cost_per_unit == null ? null : Math.round(Number(item.cost_per_unit)));
 
-  // Ledger first, cache second (see module comment).
-  const { data: movement, error: moveErr } = await database
-    .from("stock_movements")
-    .insert({
-      item_id: item.id,
-      delta: qty,
-      reason_id: await stockReasonId("purchase"),
-      unit_cost: snapshot,
-      notes: clean(input.notes),
-      created_by: me.id,
-    })
-    .select("id")
-    .single();
-  if (moveErr || !movement) fail(moveErr);
-
-  const patch: Record<string, unknown> = {
-    quantity: round1(Number(item.quantity) + qty),
-  };
-  if (unitCost != null) patch.cost_per_unit = unitCost;
-
-  const { error: updErr } = await database
-    .from("inventory_items")
-    .update(patch)
-    .eq("id", item.id);
-  if (updErr) {
-    // Best-effort rollback: soft-delete the orphaned movement.
-    await database
+    // Ledger first, cache second (see module comment).
+    const { data: movement, error: moveErr } = await database
       .from("stock_movements")
-      .update({ is_active: false })
-      .eq("id", movement.id);
-    fail(updErr);
-  }
+      .insert({
+        item_id: item.id,
+        delta: qty,
+        reason_id: await stockReasonId("purchase"),
+        unit_cost: snapshot,
+        notes: clean(input.notes),
+        created_by: me.id,
+      })
+      .select("id")
+      .single();
+    if (moveErr || !movement) return { ok: false, error: failMsg(moveErr) };
 
-  revalidate();
+    const patch: Record<string, unknown> = {
+      quantity: round1(Number(item.quantity) + qty),
+    };
+    if (unitCost != null) patch.cost_per_unit = unitCost;
+
+    const { error: updErr } = await database
+      .from("inventory_items")
+      .update(patch)
+      .eq("id", item.id);
+    if (updErr) {
+      // Best-effort rollback: soft-delete the orphaned movement.
+      await database
+        .from("stock_movements")
+        .update({ is_active: false })
+        .eq("id", movement.id);
+      return { ok: false, error: failMsg(updErr) };
+    }
+
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /**
@@ -345,56 +385,63 @@ export async function adjustStock(input: {
   delta: number;
   reason: "adjustment" | "expired";
   notes?: string | null;
-}): Promise<void> {
-  const me = await requireMe();
+}): Promise<ActionResult> {
+  try {
+    const me = await requireMe();
 
-  const delta = round1(Number(input.delta));
-  if (!Number.isFinite(delta) || delta === 0) throw new Error(t.deltaNonZero);
-  // Server actions are network-callable — don't trust the TS type at runtime.
-  if (input.reason !== "adjustment" && input.reason !== "expired") {
-    throw new Error(t.genericFail);
-  }
+    const delta = round1(Number(input.delta));
+    if (!Number.isFinite(delta) || delta === 0) {
+      return { ok: false, error: t.deltaNonZero };
+    }
+    // Server actions are network-callable — don't trust the TS type at runtime.
+    if (input.reason !== "adjustment" && input.reason !== "expired") {
+      return { ok: false, error: t.genericFail };
+    }
 
-  const database = db();
-  const { data: item, error: itemErr } = await database
-    .from("inventory_items")
-    .select("id, quantity")
-    .eq("id", input.item_id)
-    .maybeSingle();
-  if (itemErr) fail(itemErr);
-  if (!item) throw new Error(t.itemNotFound);
+    const database = db();
+    const { data: item, error: itemErr } = await database
+      .from("inventory_items")
+      .select("id, quantity")
+      .eq("id", input.item_id)
+      .maybeSingle();
+    if (itemErr) return { ok: false, error: failMsg(itemErr) };
+    if (!item) return { ok: false, error: t.itemNotFound };
 
-  const newQty = round1(Number(item.quantity) + delta);
-  if (newQty < 0) throw new Error(t.belowZero);
+    const newQty = round1(Number(item.quantity) + delta);
+    if (newQty < 0) return { ok: false, error: t.belowZero };
 
-  // Ledger first, cache second (see module comment).
-  const { data: movement, error: moveErr } = await database
-    .from("stock_movements")
-    .insert({
-      item_id: item.id,
-      delta,
-      reason_id: await stockReasonId(input.reason),
-      notes: clean(input.notes),
-      created_by: me.id,
-    })
-    .select("id")
-    .single();
-  if (moveErr || !movement) fail(moveErr);
-
-  const { error: updErr } = await database
-    .from("inventory_items")
-    .update({ quantity: newQty })
-    .eq("id", item.id);
-  if (updErr) {
-    // Best-effort rollback: soft-delete the orphaned movement.
-    await database
+    // Ledger first, cache second (see module comment).
+    const { data: movement, error: moveErr } = await database
       .from("stock_movements")
-      .update({ is_active: false })
-      .eq("id", movement.id);
-    fail(updErr);
-  }
+      .insert({
+        item_id: item.id,
+        delta,
+        reason_id: await stockReasonId(input.reason),
+        notes: clean(input.notes),
+        created_by: me.id,
+      })
+      .select("id")
+      .single();
+    if (moveErr || !movement) return { ok: false, error: failMsg(moveErr) };
 
-  revalidate();
+    const { error: updErr } = await database
+      .from("inventory_items")
+      .update({ quantity: newQty })
+      .eq("id", item.id);
+    if (updErr) {
+      // Best-effort rollback: soft-delete the orphaned movement.
+      await database
+        .from("stock_movements")
+        .update({ is_active: false })
+        .eq("id", movement.id);
+      return { ok: false, error: failMsg(updErr) };
+    }
+
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
 }
 
 /**
