@@ -47,19 +47,27 @@ const t = {
 /**
  * Weight/BCS logging dialog (SPEC §6.3, §7). Weight is entered in kg and stored
  * as grams (§2.9). `trigger` lets the same dialog mount on the cat profile and
- * in the dashboard quick-log FAB; without one it renders its own button.
+ * in the dashboard quick-log FAB; without one it renders its own button. Pass
+ * `open`/`onOpenChange` to control it externally (no trigger is rendered then)
+ * — internal state is the uncontrolled fallback.
  */
 export function WeightForm({
   catId,
   catName,
   trigger,
+  open,
+  onOpenChange,
 }: {
   catId: UUID;
   catName?: string;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { toast } = useToast();
-  const [open, setOpen] = React.useState(false);
+  const controlled = open !== undefined;
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isOpen = controlled ? open! : internalOpen;
   const [pending, startTransition] = React.useTransition();
 
   const [kg, setKg] = React.useState("");
@@ -67,16 +75,18 @@ export function WeightForm({
   const [measuredAt, setMeasuredAt] = React.useState(() => todayInTz());
   const [notes, setNotes] = React.useState("");
 
-  function reset() {
+  // Reset fields whenever the dialog opens (covers both trigger + controlled).
+  React.useEffect(() => {
+    if (!isOpen) return;
     setKg("");
     setBcs(NO_BCS);
     setMeasuredAt(todayInTz());
     setNotes("");
-  }
+  }, [isOpen]);
 
-  function onOpenChange(next: boolean) {
-    if (next) reset();
-    setOpen(next);
+  function setOpen(next: boolean) {
+    if (controlled) onOpenChange?.(next);
+    else setInternalOpen(next);
   }
 
   function submit(e: React.FormEvent) {
@@ -107,15 +117,17 @@ export function WeightForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button type="button">
-            <Scale className="h-4 w-4" />
-            {t.title}
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setOpen}>
+      {!controlled && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button type="button">
+              <Scale className="h-4 w-4" />
+              {t.title}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent>
         <DialogHeader>

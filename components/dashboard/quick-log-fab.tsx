@@ -71,8 +71,8 @@ function Row({
 /**
  * Floating quick-log menu (SPEC §7): Feed · Water · Litter · Symptom · Weight.
  * Fixed above the bottom nav, aligned to the app's max-w-md column. Each item
- * opens the matching slice dialog/form. Feed + Weight use each form's own
- * `trigger` (self-managed dialogs); Water/Litter/Symptom are controlled here.
+ * closes the menu and opens the matching controlled dialog — all dialogs live
+ * OUTSIDE the menu so closing it never unmounts an open dialog.
  */
 export function QuickLogFab({
   cats,
@@ -81,10 +81,12 @@ export function QuickLogFab({
   symptomTypes,
 }: QuickLogFabProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [feedOpen, setFeedOpen] = React.useState(false);
   const [waterOpen, setWaterOpen] = React.useState(false);
   const [litterOpen, setLitterOpen] = React.useState(false);
   const [symptomOpen, setSymptomOpen] = React.useState(false);
   const [weightExpanded, setWeightExpanded] = React.useState(false);
+  const [weightCatId, setWeightCatId] = React.useState<string | null>(null);
 
   const singleCat = cats.length === 1 ? cats[0] : null;
 
@@ -108,19 +110,13 @@ export function QuickLogFab({
                 className="pointer-events-auto fixed inset-0 -z-10 bg-black/20"
               />
               <div className="pointer-events-auto mb-3 w-52 rounded-2xl border border-border bg-popover p-1.5 shadow-lg">
-                <FeedDialog
-                  {...feedData}
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-muted">
-                        <Utensils className="h-4 w-4" />
-                      </span>
-                      {t.feed}
-                    </button>
-                  }
+                <Row
+                  icon={<Utensils className="h-4 w-4" />}
+                  label={t.feed}
+                  onClick={() => {
+                    close();
+                    setFeedOpen(true);
+                  }}
                 />
 
                 <Row
@@ -149,22 +145,17 @@ export function QuickLogFab({
                 />
 
                 {/* Weight: needs a specific cat — single cat opens directly,
-                    otherwise expand an inline per-cat picker (no nested dialog). */}
+                    otherwise expand an inline per-cat picker (no nested dialog).
+                    Each cat row closes the menu and opens that cat's controlled
+                    WeightForm (rendered outside the menu, below). */}
                 {singleCat ? (
-                  <WeightForm
-                    catId={singleCat.id}
-                    catName={singleCat.name}
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-muted">
-                          <Scale className="h-4 w-4" />
-                        </span>
-                        {t.weight}
-                      </button>
-                    }
+                  <Row
+                    icon={<Scale className="h-4 w-4" />}
+                    label={t.weight}
+                    onClick={() => {
+                      close();
+                      setWeightCatId(singleCat.id);
+                    }}
                   />
                 ) : (
                   <>
@@ -176,19 +167,17 @@ export function QuickLogFab({
                     {weightExpanded && (
                       <div className="mb-1 ml-11 space-y-0.5">
                         {cats.map((c) => (
-                          <WeightForm
+                          <button
                             key={c.id}
-                            catId={c.id}
-                            catName={c.name}
-                            trigger={
-                              <button
-                                type="button"
-                                className="block w-full rounded-lg px-3 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                              >
-                                {c.name}
-                              </button>
-                            }
-                          />
+                            type="button"
+                            onClick={() => {
+                              close();
+                              setWeightCatId(c.id);
+                            }}
+                            className="block w-full rounded-lg px-3 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                          >
+                            {c.name}
+                          </button>
                         ))}
                       </div>
                     )}
@@ -213,7 +202,20 @@ export function QuickLogFab({
         </div>
       </div>
 
-      {/* Controlled dialogs */}
+      {/* Controlled dialogs — outside the collapsible menu so closing it
+          never unmounts them mid-flight. */}
+      <FeedDialog {...feedData} open={feedOpen} onOpenChange={setFeedOpen} />
+
+      {cats.map((c) => (
+        <WeightForm
+          key={c.id}
+          catId={c.id}
+          catName={c.name}
+          open={weightCatId === c.id}
+          onOpenChange={(o) => setWeightCatId(o ? c.id : null)}
+        />
+      ))}
+
       <Dialog open={waterOpen} onOpenChange={setWaterOpen}>
         <DialogContent>
           <DialogHeader>
