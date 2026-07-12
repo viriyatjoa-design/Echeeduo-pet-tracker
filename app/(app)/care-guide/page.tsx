@@ -4,7 +4,10 @@ import { requireAppUser } from "@/lib/auth";
 import { CARE_GUIDE } from "@/lib/cat-care-facts";
 import { Card, CardContent } from "@/components/ui/card";
 
-export const dynamic = "force-static";
+// Per-request auth (requireAppUser reads the session cookie), so this route
+// must render dynamically. Do NOT force-static — that baked the build-time
+// "no session → redirect to /login" into the page for everyone.
+export const dynamic = "force-dynamic";
 
 const t = {
   back: "Settings",
