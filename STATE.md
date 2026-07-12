@@ -32,6 +32,31 @@ Build-side:
   "Ch…" truncation); catalog food cards meta+actions one row, redundant Foods/Items h2s
   removed; care rows + cat card rhythm tightened. 44px tap targets preserved.
 
+## Hardening session (2026-07-12, evening — 5-track multi-agent)
+- [x] **Adversarial audit** (55-agent workflow, find→refute→fix): 20 verified findings fixed
+  (0 critical, 5 major, 15 minor). Majors: deactivated-cat care leak (getOpenCareEvents inner-
+  joins active cats); morning report dropped litter pre-004 (stopped naming ai_analysis in the
+  select) → false quiet days; quiet-day reports now append restock + overdue/due-today care
+  heads-up with NO ai call; refresh/generate no longer discard a paid report on save failure
+  (best-effort save). Minors incl. per-item consume rollback (care + feeding hooks), recurring
+  due_time carry, logPastCareEvent 006 hint, feeding treat-check created_at tiebreaker,
+  getLatestBrief error discrimination, parseAIJson fallback guard, and the systemic theme fix.
+- [x] **Theme alpha bug class killed**: every color token now carries `<alpha-value>` in
+  tailwind.config, so `bg-x/60` / `text-x/70` opacity modifiers stop silently no-opping.
+- [x] **Test suite from zero**: vitest (native tsconfig paths, no plugin) + 39 tests over
+  kcal / care scheduling / weight-trend / time helpers. `npm test`.
+- [x] **Visual audit**: browser-driven light+dark gallery screenshots (throwaway harness,
+  removed) → dark-mode Feed-button contrast fixed (dark ink text on lightened accents;
+  Tudou caramel deepened for AA).
+- [x] **Error-masking sweep** (10-agent workflow, disjoint files): all value-returning server
+  actions (feeding/observation/weight/care/inventory/foods/meal-templates/cats/members/lookups)
+  return {ok,error} result objects so prod shows the REAL message, not a generic banner.
+  Shared ActionButton made result-aware (accepts throwing OR result actions). The Promise<void>
+  toggles still throw through the result-aware wrappers.
+- [x] **BSH care handbook**: `lib/cat-care-facts.ts` (cross-checked vet research), new
+  `/care-guide` page linked from Settings, and the real breed numbers injected into the
+  litter/health/morning-report AI prompts.
+
 ## Recent session (2026-07-12, day — British Blue retheme)
 - [x] **Compact kcal layout** (owner-picked "B + thin bar" over the big ring): progress arc
   around the cat's avatar (`AvatarKcalRing` in cat-card) + kcal numbers right-aligned in the
