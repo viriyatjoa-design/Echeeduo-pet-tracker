@@ -34,7 +34,7 @@ export function FeedAllDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{strings.today.feedAll}</DialogTitle>
         </DialogHeader>

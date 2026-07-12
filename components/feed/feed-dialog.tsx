@@ -39,7 +39,7 @@ export function FeedDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{strings.feed.title}</DialogTitle>
         </DialogHeader>

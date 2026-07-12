@@ -188,7 +188,7 @@ export function CatForm({
         )}
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? t.editTitle : t.addTitle}</DialogTitle>
           <DialogDescription>{t.subtitle}</DialogDescription>
