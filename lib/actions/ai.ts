@@ -12,6 +12,7 @@ import {
 } from "@/lib/ai";
 import { listAttachments } from "@/lib/storage";
 import { generateMorningReport, saveBrief } from "@/lib/briefs";
+import { AI_CARE_CONTEXT } from "@/lib/cat-care-facts";
 import { getWeightLogs } from "@/lib/weight-queries";
 import { getCatFeedingHistory } from "@/lib/feeding-queries";
 import { getCareEventsByCat, getCareTypeLabels } from "@/lib/care-queries";
@@ -189,7 +190,7 @@ export async function generateHealthBrief(catId: string): Promise<AIResult> {
     const data = await gatherCatData(catId);
     const text = await askAI({
     messages: [
-      { role: "system", content: FAMILY_SYSTEM_PROMPT },
+      { role: "system", content: `${FAMILY_SYSTEM_PROMPT}\n\n${AI_CARE_CONTEXT}` },
       {
         role: "user",
         content: `Write a health analysis of ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (logged intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns to keep an eye on or mention to the vet, or "nothing concerning" if so), "What you can try" (1-3 practical suggestions tied to the data — hydration, wet-food share, fiber, portion pacing; skip this section entirely if everything looks normal), "Coming up" (open care items). Under 280 words total.\n\nDATA:\n${JSON.stringify(data)}`,
@@ -360,7 +361,7 @@ export async function analyzeLitterPhoto(litterLogId: string): Promise<AIResult>
       model: VISION_MODEL,
       maxTokens: 4000,
       messages: [
-        { role: "system", content: LITTER_SYSTEM_PROMPT },
+        { role: "system", content: `${LITTER_SYSTEM_PROMPT}\n\n${AI_CARE_CONTEXT}` },
         {
           role: "user",
           content: [

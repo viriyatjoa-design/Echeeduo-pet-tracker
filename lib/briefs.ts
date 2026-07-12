@@ -6,6 +6,7 @@ import { getCareTypeLabels } from "@/lib/care-queries";
 import { dailyTarget } from "@/lib/kcal";
 import { gramsToKg } from "@/lib/weight";
 import { getRestockWarnings } from "@/lib/restock";
+import { AI_CARE_CONTEXT } from "@/lib/cat-care-facts";
 import { todayInTz, addDaysToDate, relativeDay, APP_TZ } from "@/lib/time";
 import type { AIBrief, Cat, UUID, WeightLog } from "@/lib/types";
 
@@ -311,7 +312,7 @@ export async function generateMorningReport(
       model: VISION_MODEL,
       maxTokens: 4000,
       messages: [
-        { role: "system", content: MORNING_SYSTEM_PROMPT },
+        { role: "system", content: `${MORNING_SYSTEM_PROMPT}\n\n${AI_CARE_CONTEXT}` },
         {
           role: "user",
           content: `Write this morning's report (${today}).\n\nDATA:\n${JSON.stringify(data)}`,

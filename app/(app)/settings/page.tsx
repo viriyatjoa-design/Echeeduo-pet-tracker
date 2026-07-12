@@ -179,6 +179,13 @@ export default async function SettingsPage() {
             Open inventory
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
+          <Link
+            href="/care-guide"
+            className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-accent"
+          >
+            Care guide
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
         </CardContent>
       </Card>
 
