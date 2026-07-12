@@ -29,6 +29,7 @@ import {
 import { gramsFromPortion, kcalFromGrams, round1 } from "@/lib/kcal";
 import type { Cat, Food, MealTemplateItem } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const PORTIONS: { value: number; label: string }[] = [
   { value: 0.25, label: "¼" },
@@ -141,7 +142,7 @@ export function TemplateItemForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

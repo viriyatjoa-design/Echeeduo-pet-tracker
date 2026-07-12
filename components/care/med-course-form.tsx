@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createMedCourse } from "@/lib/actions/care";
 import type { Cat } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   desc: "Generates one tickable dose for every day × time across the course.",
@@ -103,7 +104,7 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

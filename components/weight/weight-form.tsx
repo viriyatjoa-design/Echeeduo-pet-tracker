@@ -28,6 +28,7 @@ import { logWeight } from "@/lib/actions/weight";
 import { todayInTz } from "@/lib/time";
 import { strings } from "@/lib/strings";
 import type { UUID } from "@/lib/types";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_BCS = "__none__";
 const BCS_SCORES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
@@ -109,7 +110,7 @@ export function WeightForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

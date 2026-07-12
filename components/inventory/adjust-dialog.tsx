@@ -26,6 +26,7 @@ import { adjustStock } from "@/lib/actions/inventory";
 import type { InventoryItemView } from "@/lib/inventory-queries";
 import { strings } from "@/lib/strings";
 import { cn } from "@/lib/utils";
+import { actionErrorMessage } from "@/lib/action-error";
 
 type Reason = "adjustment" | "expired";
 
@@ -80,7 +81,7 @@ export function AdjustDialog({ item }: { item: InventoryItemView }) {
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : t.wrong,
+          title: actionErrorMessage(err, t.wrong),
           variant: "destructive",
         });
       }

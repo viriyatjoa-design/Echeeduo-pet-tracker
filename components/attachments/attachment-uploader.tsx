@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { compressImage } from "./image-compress";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   addPhoto: "Add photo",
@@ -57,7 +58,7 @@ export function AttachmentUploader({
     } catch (err) {
       toast({
         title: t.error,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
     } finally {

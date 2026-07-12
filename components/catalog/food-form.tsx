@@ -28,6 +28,7 @@ import { scanFoodLabel } from "@/lib/actions/ai";
 import { compressImage } from "@/components/attachments/image-compress";
 import type { Food, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_UNIT = "__none__";
 
@@ -164,7 +165,7 @@ export function FoodForm({
       });
     } catch (err) {
       toast({
-        title: err instanceof Error ? err.message : t.scanError,
+        title: actionErrorMessage(err, t.scanError),
         variant: "destructive",
       });
     } finally {
@@ -215,7 +216,7 @@ export function FoodForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

@@ -29,6 +29,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newCat: "New cat",
@@ -160,7 +161,7 @@ export function CatForm({
     } catch (err) {
       toast({
         title: strings.auth.genericError,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
     } finally {

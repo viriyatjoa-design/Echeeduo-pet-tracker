@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { removeCareEvent } from "@/lib/actions/care";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   label: "Remove",
@@ -32,7 +33,7 @@ export function RemoveEventButton({
         toast({ title: t.removed, variant: "success" });
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

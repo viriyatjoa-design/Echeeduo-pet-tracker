@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateHealthBrief, generateVetSummary } from "@/lib/actions/ai";
 import { formatDateTime } from "@/lib/time";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   title: "AI health analysis",
@@ -83,7 +84,7 @@ export function HealthBriefCard({
       }
     } catch (err) {
       toast({
-        title: err instanceof Error ? err.message : t.genericError,
+        title: actionErrorMessage(err, t.genericError),
         variant: "destructive",
       });
     } finally {

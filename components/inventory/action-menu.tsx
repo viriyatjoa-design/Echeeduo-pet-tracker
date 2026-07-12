@@ -10,6 +10,7 @@ import type { Lookup } from "@/lib/types";
 import type { InventoryItemView } from "@/lib/inventory-queries";
 import { ItemForm, type FoodOption } from "./item-form";
 import { ItemHistory } from "./item-history";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   more: "More actions",
@@ -50,7 +51,7 @@ export function ActionMenu({
         toast({ title: t.deactivated, variant: "success" });
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : t.wrong,
+          title: actionErrorMessage(err, t.wrong),
           variant: "destructive",
         });
       }

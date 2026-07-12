@@ -4,6 +4,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import type { ButtonProps } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { actionErrorMessage } from "@/lib/action-error";
 
 /**
  * A button that runs a bound Server Action inside a transition, with a confirm
@@ -43,7 +44,7 @@ export function ActionButton({
             if (successText) toast({ title: successText, variant: "success" });
           } catch (err) {
             toast({
-              title: err instanceof Error ? err.message : "Something went wrong",
+              title: actionErrorMessage(err, "Something went wrong"),
               variant: "destructive",
             });
           }

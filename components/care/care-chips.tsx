@@ -8,6 +8,7 @@ import { relativeDay } from "@/lib/time";
 import { completeCareEvent } from "@/lib/actions/care";
 import { cn } from "@/lib/utils";
 import type { CareEvent } from "@/lib/types";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   done: "Marked done",
@@ -71,7 +72,7 @@ function Chip({
         });
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

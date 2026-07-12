@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createItem, updateItem } from "@/lib/actions/inventory";
 import type { InventoryItem, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const NO_FOOD = "__none__";
 
@@ -146,7 +147,7 @@ export function ItemForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : t.wrong,
+          title: actionErrorMessage(err, t.wrong),
           variant: "destructive",
         });
       }

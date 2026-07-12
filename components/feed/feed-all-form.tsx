@@ -24,6 +24,7 @@ import {
   resolveSnapshot,
   type AmountValue,
 } from "./amount-picker";
+import { actionErrorMessage } from "@/lib/action-error";
 
 /** Data the feed-all flow needs — fetched by the Server Component parent. */
 export type FeedAllData = {
@@ -218,7 +219,7 @@ export function FeedAllForm({
         onDone?.();
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

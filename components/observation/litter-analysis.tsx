@@ -9,6 +9,7 @@ import { compressImage } from "@/components/attachments/image-compress";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { analyzeLitterPhoto } from "@/lib/actions/ai";
 import { formatDateTime } from "@/lib/time";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   aiRead: "AI read",
@@ -59,17 +60,27 @@ export function LitterAnalysis({
 
   async function runAnalysis() {
     setAnalyzing(true);
-    const res = await analyzeLitterPhoto(litterId);
-    setAnalyzing(false);
-    if (res.ok) {
-      toast({ title: t.ready, variant: "success" });
-      router.refresh();
-    } else {
+    try {
+      const res = await analyzeLitterPhoto(litterId);
+      if (res.ok) {
+        toast({ title: t.ready, variant: "success" });
+        router.refresh();
+      } else {
+        toast({
+          title: t.analysisFailed,
+          description: res.error,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      // Invocation itself failed (e.g. stale PWA after a deploy).
       toast({
         title: t.analysisFailed,
-        description: res.error,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
+    } finally {
+      setAnalyzing(false);
     }
   }
 
@@ -88,7 +99,7 @@ export function LitterAnalysis({
     } catch (err) {
       toast({
         title: t.uploadError,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
       setUploading(false);

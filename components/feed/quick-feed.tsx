@@ -19,6 +19,7 @@ import {
   resolveSnapshot,
   type AmountValue,
 } from "./amount-picker";
+import { actionErrorMessage } from "@/lib/action-error";
 
 /** Everything the quick-feed flow needs — fetched by the Server Component parent. */
 export type FeedData = {
@@ -150,7 +151,7 @@ export function QuickFeed({
         onDone?.();
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

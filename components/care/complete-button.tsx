@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { completeCareEvent } from "@/lib/actions/care";
 import { relativeDay, todayInTz } from "@/lib/time";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   done: "Marked done",
@@ -55,7 +56,7 @@ export function CompleteButton({
         });
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

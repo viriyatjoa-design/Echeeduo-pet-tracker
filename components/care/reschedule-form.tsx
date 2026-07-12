@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { rescheduleCareEvent } from "@/lib/actions/care";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   title: "Reschedule",
@@ -61,7 +62,7 @@ export function RescheduleForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

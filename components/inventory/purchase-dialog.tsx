@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { purchaseStock } from "@/lib/actions/inventory";
 import type { InventoryItemView } from "@/lib/inventory-queries";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   trigger: "Purchase",
@@ -66,7 +67,7 @@ export function PurchaseDialog({ item }: { item: InventoryItemView }) {
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : t.wrong,
+          title: actionErrorMessage(err, t.wrong),
           variant: "destructive",
         });
       }

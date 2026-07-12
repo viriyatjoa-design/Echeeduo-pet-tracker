@@ -30,6 +30,7 @@ import { logSymptom } from "@/lib/actions/observation";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { strings } from "@/lib/strings";
 import type { Cat, Lookup } from "@/lib/types";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newSymptom: "Symptom",
@@ -110,7 +111,7 @@ export function SymptomForm({
       } catch (err) {
         toast({
           title: t.error,
-          description: err instanceof Error ? err.message : undefined,
+          description: actionErrorMessage(err, "") || undefined,
           variant: "destructive",
         });
         return;

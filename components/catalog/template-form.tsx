@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createTemplate, updateTemplate } from "@/lib/actions/meal-templates";
 import type { MealTemplate } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   newTemplate: "New template",
@@ -62,7 +63,7 @@ export function TemplateForm({ template }: { template?: MealTemplate }) {
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

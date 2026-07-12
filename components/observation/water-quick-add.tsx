@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { logWater } from "@/lib/actions/observation";
 import type { Cat } from "@/lib/types";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   water: "Water",
@@ -75,7 +76,7 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
       } catch (err) {
         toast({
           title: t.error,
-          description: err instanceof Error ? err.message : undefined,
+          description: actionErrorMessage(err, "") || undefined,
           variant: "destructive",
         });
       } finally {

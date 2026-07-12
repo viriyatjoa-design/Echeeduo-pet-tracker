@@ -7,6 +7,7 @@ import { setMemberActive } from "@/lib/actions/members";
 import { useToast } from "@/hooks/use-toast";
 import { strings } from "@/lib/strings";
 import { Button } from "@/components/ui/button";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   confirmDeactivate: (name: string) =>
@@ -54,7 +55,7 @@ export function ActiveToggle({
     } catch (err) {
       toast({
         title: strings.auth.genericError,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
     } finally {

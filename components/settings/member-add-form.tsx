@@ -8,6 +8,7 @@ import { strings } from "@/lib/strings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   email: "Email",
@@ -38,7 +39,7 @@ export function MemberAddForm() {
     } catch (err) {
       toast({
         title: strings.auth.genericError,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
     } finally {

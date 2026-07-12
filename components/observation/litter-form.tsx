@@ -29,6 +29,7 @@ import { compressImage } from "@/components/attachments/image-compress";
 import { logLitter } from "@/lib/actions/observation";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { analyzeLitterPhoto } from "@/lib/actions/ai";
+import { actionErrorMessage } from "@/lib/action-error";
 import { strings } from "@/lib/strings";
 import type { Cat, Lookup } from "@/lib/types";
 
@@ -120,7 +121,7 @@ export function LitterForm({
       } catch (err) {
         toast({
           title: t.error,
-          description: err instanceof Error ? err.message : undefined,
+          description: actionErrorMessage(err, ""),
           variant: "destructive",
         });
         return;
@@ -160,18 +161,26 @@ export function LitterForm({
       // closes so saving never waits on the model. The result lands on the
       // row (refresh shows it); toasts report either way.
       if (analyze) {
-        void analyzeLitterPhoto(id).then((res) => {
-          if (res.ok) {
-            toast({ title: t.analysisReady, variant: "success" });
-          } else {
+        void analyzeLitterPhoto(id)
+          .then((res) => {
+            if (res.ok) {
+              toast({ title: t.analysisReady, variant: "success" });
+            } else {
+              toast({
+                title: t.analysisFailed,
+                description: res.error,
+                variant: "warning",
+              });
+            }
+            router.refresh();
+          })
+          .catch((err) => {
             toast({
               title: t.analysisFailed,
-              description: res.error,
+              description: actionErrorMessage(err, ""),
               variant: "warning",
             });
-          }
-          router.refresh();
-        });
+          });
       }
     });
   }

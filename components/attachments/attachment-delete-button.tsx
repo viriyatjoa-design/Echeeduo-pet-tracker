@@ -6,6 +6,7 @@ import { Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { deleteAttachmentAction } from "@/lib/actions/attachments";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   remove: "Remove photo",
@@ -38,7 +39,7 @@ export function AttachmentDeleteButton({
     } catch (err) {
       toast({
         title: t.error,
-        description: err instanceof Error ? err.message : undefined,
+        description: actionErrorMessage(err, "") || undefined,
         variant: "destructive",
       });
       setBusy(false);

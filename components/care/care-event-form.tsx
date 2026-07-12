@@ -28,6 +28,7 @@ import { createCareEvent, logPastCareEvent } from "@/lib/actions/care";
 import { relativeDay, todayInTz } from "@/lib/time";
 import type { Cat, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const t = {
   desc: "Schedule a one-off or recurring care event for a cat.",
@@ -129,7 +130,7 @@ export function CareEventForm({
         setOpen(false);
       } catch (err) {
         toast({
-          title: err instanceof Error ? err.message : "Something went wrong",
+          title: actionErrorMessage(err, "Something went wrong"),
           variant: "destructive",
         });
       }

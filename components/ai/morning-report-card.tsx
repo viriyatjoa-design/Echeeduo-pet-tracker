@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { refreshMorningReport } from "@/lib/actions/ai";
+import { actionErrorMessage } from "@/lib/action-error";
 import { formatDateTime, formatDate } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -44,14 +45,24 @@ export function MorningReportCard({ brief }: MorningReportCardProps) {
 
   async function refresh() {
     setPending(true);
-    const res = await refreshMorningReport();
-    setPending(false);
-    if (res.ok) {
-      toast({ title: t.updated, variant: "success" });
-      setExpanded(true);
-      router.refresh();
-    } else {
-      toast({ title: t.failed, description: res.error, variant: "destructive" });
+    try {
+      const res = await refreshMorningReport();
+      if (res.ok) {
+        toast({ title: t.updated, variant: "success" });
+        setExpanded(true);
+        router.refresh();
+      } else {
+        toast({ title: t.failed, description: res.error, variant: "destructive" });
+      }
+    } catch (err) {
+      // Invocation itself failed (e.g. stale PWA after a deploy).
+      toast({
+        title: t.failed,
+        description: actionErrorMessage(err, "") || undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setPending(false);
     }
   }
 
