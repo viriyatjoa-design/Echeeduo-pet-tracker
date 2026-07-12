@@ -19,6 +19,21 @@ Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 shipped → M2 in progr
   Adjust). A DB-side increment RPC would close it if it ever matters.
 - [x] Final green build (14 routes) + push
 
+## Morning session (2026-07-12)
+- [x] **Complete UI/UX audit** (owner-requested): 3 inspectors (forms/dialogs, pages/nav/
+  theming, core flows) → ~20 confirmed findings, ALL fixed. Highlights: viewportFit=cover
+  (iOS safe-area insets were silently 0), stale 85vh overrides on feed dialogs (unreachable
+  Save with keyboard open), invalid bg-destructive/12 (overdue chips lost their red pill),
+  warning-strong contrast token, decimal portion input ("0.75" now typeable), required-select
+  submit guards, per-chip water spinners, photo-upload failure no longer invites duplicate
+  rows, controlled FAB dialogs (menu closes cleanly), nav highlights owning tab on sub-routes,
+  44px tap targets on ✓ / reorder arrows.
+- [x] **Dashboard change (owner-approved):** water widget on cat cards → one-tap "Feed {cat}"
+  button (FeedDialog preselected; ≤3 taps honored per SPEC §9) + compact water one-liner.
+  Water logging remains in FAB + Health tab.
+- [x] Login: surface real Supabase send errors; dialog primitive max-h-[85dvh] scroll fix.
+- [x] Final green build + push (b0680ca)
+
 ## Phase A — Foundation
 - [x] Config scaffold (Next 15 + TS + Tailwind v3 + shadcn tokens), light/dark token layer
 - [x] `lib/strings.ts`, `lib/types.ts`, `lib/time.ts`, `lib/utils.ts`
