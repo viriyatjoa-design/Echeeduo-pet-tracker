@@ -73,9 +73,17 @@ export async function logFeed(input: {
     notes: clean(input.notes),
     created_by: me.id,
   };
-  // Let the DB default (now()) stand unless an explicit time was provided.
+  // Let the DB default (now()) stand unless an explicit time was provided
+  // (backdated "we forgot to log" entries). Never in the future.
   const fedAt = clean(input.fed_at);
-  if (fedAt) row.fed_at = fedAt;
+  if (fedAt) {
+    const t = Date.parse(fedAt);
+    if (!Number.isFinite(t)) throw new Error("Invalid feeding time.");
+    if (t > Date.now() + 5 * 60_000) {
+      throw new Error("Feeding time can't be in the future.");
+    }
+    row.fed_at = fedAt;
+  }
 
   const { data: inserted, error } = await database
     .from("feeding_logs")
@@ -132,6 +140,8 @@ export async function logFeed(input: {
 
 export async function applyMealTemplate(input: {
   template_id: string;
+  /** Optional backdated time applied to every row (forgotten meal). */
+  fed_at?: string | null;
   rows: {
     cat_id: string;
     food_id: string;
@@ -146,6 +156,15 @@ export async function applyMealTemplate(input: {
 
   const rows = input.rows ?? [];
   if (rows.length === 0) throw new Error("Nothing to log — every cat was skipped.");
+
+  const fedAt = clean(input.fed_at);
+  if (fedAt) {
+    const t = Date.parse(fedAt);
+    if (!Number.isFinite(t)) throw new Error("Invalid feeding time.");
+    if (t > Date.now() + 5 * 60_000) {
+      throw new Error("Feeding time can't be in the future.");
+    }
+  }
 
   const database = db();
 
@@ -180,6 +199,7 @@ export async function applyMealTemplate(input: {
       kcal: kcalFromGrams(grams, per100),
       notes: clean(r.notes),
       created_by: me.id,
+      ...(fedAt ? { fed_at: fedAt } : {}),
     };
   });
 

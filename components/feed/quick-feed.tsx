@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { strings } from "@/lib/strings";
 import { round1 } from "@/lib/kcal";
 import { CatAvatar } from "@/components/cats/cat-avatar";
+import { Input } from "@/components/ui/input";
 import { logFeed } from "@/lib/actions/feeding";
 import type { Cat, Food, Lookup } from "@/lib/types";
 import {
@@ -48,6 +49,13 @@ function orderFoods(foods: Food[], recentIds: string[]): Food[] {
   return [...head, ...rest];
 }
 
+/** Local 'YYYY-MM-DDTHH:mm' for datetime-local defaults/max (phone timezone). */
+function defaultLocalDateTime(): string {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 export function QuickFeed({
   cats,
   foods,
@@ -70,6 +78,9 @@ export function QuickFeed({
   );
   const [foodId, setFoodId] = React.useState("");
   const [amount, setAmount] = React.useState<AmountValue | null>(null);
+  // When was it fed? Default "now"; "earlier" backdates a forgotten log.
+  const [whenMode, setWhenMode] = React.useState<"now" | "earlier">("now");
+  const [fedAtLocal, setFedAtLocal] = React.useState("");
 
   const orderedFoods = React.useMemo(() => {
     const recent = (catId && recentByCat?.[catId]) || mruFoodIds;
@@ -100,6 +111,19 @@ export function QuickFeed({
       });
       return;
     }
+    let fedAtIso: string | null = null;
+    if (whenMode === "earlier") {
+      if (!fedAtLocal) {
+        toast({ title: "Pick when it was fed.", variant: "destructive" });
+        return;
+      }
+      const d = new Date(fedAtLocal);
+      if (Number.isNaN(d.getTime()) || d.getTime() > Date.now()) {
+        toast({ title: "That time is in the future.", variant: "destructive" });
+        return;
+      }
+      fedAtIso = d.toISOString();
+    }
     const snap = resolveSnapshot(
       selectedFood,
       amount,
@@ -113,6 +137,7 @@ export function QuickFeed({
           grams: snap.grams,
           qty: snap.qty,
           unit_label: snap.unit_label,
+          fed_at: fedAtIso,
         });
         toast({ title: strings.feed.saved, variant: "success" });
         if (treatWarning) {
@@ -120,6 +145,8 @@ export function QuickFeed({
         }
         setFoodId("");
         setAmount(null);
+        setWhenMode("now");
+        setFedAtLocal("");
         onDone?.();
       } catch (err) {
         toast({
@@ -228,6 +255,43 @@ export function QuickFeed({
             value={amount}
             onChange={setAmount}
           />
+
+          {/* When? Default now; "Earlier" backdates a forgotten log. */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">When?</p>
+            <div className="flex gap-2">
+              {(["now", "earlier"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    setWhenMode(m);
+                    if (m === "earlier" && !fedAtLocal) {
+                      setFedAtLocal(defaultLocalDateTime());
+                    }
+                  }}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                    whenMode === m
+                      ? "border-primary bg-accent text-foreground"
+                      : "border-border text-muted-foreground hover:bg-accent",
+                  )}
+                >
+                  {m === "now" ? "Now" : "Earlier…"}
+                </button>
+              ))}
+            </div>
+            {whenMode === "earlier" && (
+              <Input
+                type="datetime-local"
+                value={fedAtLocal}
+                max={defaultLocalDateTime()}
+                onChange={(e) => setFedAtLocal(e.target.value)}
+                aria-label="When it was fed"
+              />
+            )}
+          </div>
+
           <Button
             type="button"
             size="lg"

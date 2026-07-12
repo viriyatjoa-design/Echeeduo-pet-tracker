@@ -9,6 +9,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { strings } from "@/lib/strings";
@@ -52,6 +53,13 @@ type Row = {
   amount: AmountValue;
   skip: boolean;
 };
+
+/** Local 'YYYY-MM-DDTHH:mm' for datetime-local defaults/max (phone timezone). */
+function defaultLocalDateTime(): string {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
 
 export function FeedAllForm({
   templates,
@@ -119,6 +127,9 @@ export function FeedAllForm({
   const [templateId, setTemplateId] = React.useState(
     templates[0]?.id ?? "",
   );
+  // When was the meal fed? Default now; "earlier" backdates a forgotten meal.
+  const [whenMode, setWhenMode] = React.useState<"now" | "earlier">("now");
+  const [fedAtLocal, setFedAtLocal] = React.useState("");
   const [rows, setRows] = React.useState<Row[]>(() =>
     templates[0] ? buildRows(templates[0].id) : [],
   );
@@ -175,10 +186,25 @@ export function FeedAllForm({
       return;
     }
 
+    let fedAtIso: string | null = null;
+    if (whenMode === "earlier") {
+      if (!fedAtLocal) {
+        toast({ title: "Pick when the meal was fed.", variant: "destructive" });
+        return;
+      }
+      const d = new Date(fedAtLocal);
+      if (Number.isNaN(d.getTime()) || d.getTime() > Date.now()) {
+        toast({ title: "That time is in the future.", variant: "destructive" });
+        return;
+      }
+      fedAtIso = d.toISOString();
+    }
+
     startTransition(async () => {
       try {
         const { count, treatWarningCats } = await applyMealTemplate({
           template_id: templateId,
+          fed_at: fedAtIso,
           rows: payload,
         });
         toast({ title: t.applied(count), variant: "success" });
@@ -299,6 +325,42 @@ export function FeedAllForm({
               );
             })}
           </ul>
+        )}
+      </section>
+
+      {/* When? Default now; "Earlier" backdates a forgotten meal. */}
+      <section className="space-y-2">
+        <p className="text-sm font-medium text-foreground">When?</p>
+        <div className="flex gap-2">
+          {(["now", "earlier"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setWhenMode(m);
+                if (m === "earlier" && !fedAtLocal) {
+                  setFedAtLocal(defaultLocalDateTime());
+                }
+              }}
+              className={cn(
+                "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
+                whenMode === m
+                  ? "border-primary bg-accent text-foreground"
+                  : "border-border text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {m === "now" ? "Now" : "Earlier…"}
+            </button>
+          ))}
+        </div>
+        {whenMode === "earlier" && (
+          <Input
+            type="datetime-local"
+            value={fedAtLocal}
+            max={defaultLocalDateTime()}
+            onChange={(e) => setFedAtLocal(e.target.value)}
+            aria-label="When the meal was fed"
+          />
         )}
       </section>
 
