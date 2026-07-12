@@ -11,6 +11,7 @@ import {
   VISION_MODEL,
 } from "@/lib/ai";
 import { listAttachments } from "@/lib/storage";
+import { generateMorningReport, saveBrief } from "@/lib/briefs";
 import { getWeightLogs } from "@/lib/weight-queries";
 import { getCatFeedingHistory } from "@/lib/feeding-queries";
 import { getCareEventsByCat, getCareTypeLabels } from "@/lib/care-queries";
@@ -135,6 +136,34 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : "Something went wrong.";
 }
 
+/**
+ * Persist a per-cat analysis/summary so the next visit reads it instantly.
+ * Best-effort: pre-migration-005 the text is still returned (just ephemeral).
+ */
+async function saveBriefQuietly(kind: string, catId: string, text: string, by: string) {
+  try {
+    await saveBrief({ kind, catId, content: text, model: null, createdBy: by });
+  } catch {
+    // Table missing (migration 005 not run) — the feature degrades to ephemeral.
+  }
+}
+
+/** Manual "generate/refresh now" for the household morning report. */
+export async function refreshMorningReport(): Promise<AIResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) throw new Error("Unauthorized");
+    if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+
+    const res = await generateMorningReport(me.id);
+    if (!res.ok) return res;
+    revalidatePath("/", "layout");
+    return { ok: true, text: res.text };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
+}
+
 export async function generateHealthBrief(catId: string): Promise<AIResult> {
   try {
     const me = await getCurrentAppUser();
@@ -152,6 +181,8 @@ export async function generateHealthBrief(catId: string): Promise<AIResult> {
     ],
       maxTokens: 6000,
     });
+    await saveBriefQuietly("health_analysis", catId, text, me.id);
+    revalidatePath(`/cats/${catId}`);
     return { ok: true, text };
   } catch (err) {
     return { ok: false, error: errMsg(err) };
@@ -175,6 +206,8 @@ export async function generateVetSummary(catId: string): Promise<AIResult> {
     ],
       maxTokens: 6000,
     });
+    await saveBriefQuietly("vet_summary", catId, text, me.id);
+    revalidatePath(`/cats/${catId}`);
     return { ok: true, text };
   } catch (err) {
     return { ok: false, error: errMsg(err) };

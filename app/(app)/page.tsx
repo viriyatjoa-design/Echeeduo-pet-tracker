@@ -3,6 +3,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAIReady } from "@/lib/ai";
+import { getLatestBrief } from "@/lib/briefs";
 import { strings } from "@/lib/strings";
 import { getLookupsByCategory } from "@/lib/lookups";
 import {
@@ -21,6 +22,7 @@ import { formatDate } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { FeedAllDialog } from "@/components/feed/feed-all-dialog";
 import { CatCard } from "@/components/dashboard/cat-card";
+import { MorningReportCard } from "@/components/ai/morning-report-card";
 import { QuickLogFab } from "@/components/dashboard/quick-log-fab";
 import type { Cat, Food, MealTemplate, MealTemplateItem } from "@/lib/types";
 
@@ -85,6 +87,10 @@ export default async function TodayPage() {
 
   const cats = (catsRes.data ?? []) as Cat[];
   const foods = (foodsRes.data ?? []) as Food[];
+  const aiReady = isAIReady();
+  const morningBrief = aiReady
+    ? await getLatestBrief("morning_report", null)
+    : null;
   const templates = (templatesRes.data ?? []) as MealTemplate[];
   const templateItems = (templateItemsRes.data ?? []) as MealTemplateItem[];
 
@@ -158,6 +164,8 @@ export default async function TodayPage() {
     <div className="space-y-4">
       {header}
 
+      {aiReady && <MorningReportCard brief={morningBrief} />}
+
       <div className="space-y-4">
         {cats.map((cat) => {
           const totals = todayKcal.get(cat.id);
@@ -191,7 +199,7 @@ export default async function TodayPage() {
         feedData={feedData}
         stoolConsistencies={stoolConsistencies}
         symptomTypes={symptomTypes}
-        aiReady={isAIReady()}
+        aiReady={aiReady}
       />
     </div>
   );

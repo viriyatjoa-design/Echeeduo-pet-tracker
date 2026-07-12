@@ -8,6 +8,9 @@
 > 2. **Litter photo AI analysis**: same way, run `supabase/migrations/004_litter_ai.sql`
 >    (two new columns on `litter_logs`). Until then the analysis still runs but can't be
 >    saved — the app tells you to run the migration.
+> 3. **Morning report + saved analyses**: same way, run `supabase/migrations/005_ai_briefs.sql`
+>    (one new table), and add a `CRON_SECRET` env var in Vercel (any long random string,
+>    30+ characters) so the nightly report can run — see the AI section below.
 
 Roughly 20–30 minutes end to end. You need a Supabase account and a Vercel account (both
 have free tiers that are plenty for a household).
@@ -84,12 +87,30 @@ to the vet) onto the entry. On any litter entry you can **Refresh** the
 analysis or **Update photo** (which re-analyzes). It's a description, not a
 diagnosis — the vet summary includes these observations too.
 
-**Speed (optional):** K2.6 is a "thinking" model — great for briefs, slow for
-a single photo. Add `MOONSHOT_VISION_MODEL` in Vercel with a vision-capable
-non-thinking model ID from your Moonshot console (e.g. `kimi-latest`) and
-redeploy: photo jobs (litter analysis + label scan) will use it and feel much
-snappier. Check the exact ID in the console — if the model rejects the request
-the error is shown to you directly.
+**Speed (optional):** K2.6 is a "thinking" model — great for deep analyses,
+slow for quick jobs. Add `MOONSHOT_VISION_MODEL` in Vercel with a
+vision-capable non-thinking model ID from your Moonshot console (e.g.
+`kimi-latest`) and redeploy: quick jobs (litter analysis, label scan, and the
+nightly morning report) will use it and feel much snappier. Check the exact ID
+in the console — if the model rejects the request the error is shown to you
+directly.
+
+**Morning report** (run migration `005_ai_briefs.sql` first): every night at
+~4:30 (Jakarta) a Vercel cron writes one household digest of the last 24 hours
+— eating vs targets, litter, symptoms, upcoming care — for all cats. It waits
+for you at the top of the dashboard, collapsed; tap to expand. Nights where
+nothing was logged store a "Quiet day" line without calling the AI. If a night
+run ever fails you still see the newest report with its date, and a Refresh
+button regenerates on demand. To enable the cron: Vercel → Settings →
+Environment Variables → add `CRON_SECRET` = any long random string (30+
+characters; e.g. paste the output of `openssl rand -hex 24`, or just mash a
+long unique string) → redeploy. Without it the cron is rejected (secure
+default) — the manual button still works.
+
+**Health analysis** (cat profile → Health tab): the old "health brief" is now
+the deep dive — it reads the full 30-day history with the thinking model, and
+the latest result (and vet summary) is **saved**, so it shows instantly on the
+next visit instead of regenerating.
 
 ## Notes
 - **Auth choice:** we use Supabase magic-link instead of the Zitadel described in `SPEC.md`

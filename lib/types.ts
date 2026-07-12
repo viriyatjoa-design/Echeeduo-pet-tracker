@@ -148,6 +148,19 @@ export type LitterLog = {
   created_at: string;
 };
 
+/** A stored AI-written text (migration 005): morning report / health analysis / vet summary. */
+export type AIBrief = {
+  id: UUID;
+  kind: string;
+  cat_id: UUID | null;
+  brief_date: string;
+  content: string;
+  model: string | null;
+  created_by: UUID | null;
+  is_active: boolean;
+  created_at: string;
+};
+
 export type WaterLog = {
   id: UUID;
   cat_id: UUID;

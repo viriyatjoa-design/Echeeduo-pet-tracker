@@ -12,6 +12,7 @@ import { WeightSection } from "@/components/weight/weight-section";
 import { HealthSection } from "@/components/observation/health-section";
 import { HealthBriefCard } from "@/components/ai/health-brief-card";
 import { isAIReady } from "@/lib/ai";
+import { getLatestBrief } from "@/lib/briefs";
 import { CatCareTimeline } from "@/components/care/cat-care-timeline";
 import type { Cat } from "@/lib/types";
 
@@ -42,7 +43,11 @@ export default async function CatProfilePage({
   if (!catRow) notFound();
   const cat = catRow as Cat;
 
-  const attachments = await listAttachments("cat", id);
+  const [attachments, storedAnalysis, storedVet] = await Promise.all([
+    listAttachments("cat", id),
+    getLatestBrief("health_analysis", id),
+    getLatestBrief("vet_summary", id),
+  ]);
   const photoUrl = attachments[0]?.url ?? undefined;
 
   return (
@@ -84,6 +89,16 @@ export default async function CatProfilePage({
               catId={id}
               catName={cat.name}
               aiReady={isAIReady()}
+              storedAnalysis={
+                storedAnalysis
+                  ? { text: storedAnalysis.content, at: storedAnalysis.created_at }
+                  : null
+              }
+              storedVet={
+                storedVet
+                  ? { text: storedVet.content, at: storedVet.created_at }
+                  : null
+              }
             />
             <HealthSection cat={cat} />
           </div>

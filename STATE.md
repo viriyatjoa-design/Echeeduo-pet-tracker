@@ -6,7 +6,9 @@ Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 + M2 shipped, live in p
 Owner-side (blocked on Rio):
 - [ ] Run `003_inventory.sql` in Supabase SQL Editor (activates inventory; app degrades gracefully until then) — status unconfirmed
 - [ ] **Run `004_litter_ai.sql` in Supabase SQL Editor** (2 columns on litter_logs; litter AI analysis can't be saved until then — the error says so)
-- [ ] Optional: set `MOONSHOT_VISION_MODEL` in Vercel (vision-capable non-thinking model, e.g. `kimi-latest` — verify ID in console) for faster photo analysis
+- [ ] **Run `005_ai_briefs.sql` in Supabase SQL Editor** (ai_briefs table; morning report + saved analyses need it)
+- [ ] **Set `CRON_SECRET` in Vercel** (any long random string) + redeploy — the nightly morning report is rejected until then (manual Refresh works once 005 is run)
+- [ ] Optional: set `MOONSHOT_VISION_MODEL` in Vercel (vision-capable non-thinking model, e.g. `kimi-latest` — verify ID in console) for faster photo analysis + morning report
 - [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
 - [ ] Fill cat details (sex/birth/neutered) + first weights to unlock kcal targets — status unconfirmed
 - [x] Kimi/Moonshot API key set by owner; model `kimi-k2.6` confirmed working (briefs + scanner)
@@ -18,6 +20,17 @@ Build-side:
   AI actions converted to result objects (07-12); the OTHER actions (care, feeding, catalog,
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
+
+## Recent session (2026-07-12, day — morning report)
+- [x] **Morning report** (owner-approved shape from brainstorm): nightly household digest.
+  `lib/briefs.ts` (gather last-24h logs across cats → fast model → store in `ai_briefs`,
+  migration 005; empty night = stored "Quiet day" line, NO AI call). Cron route
+  `/api/cron/morning-report` (Bearer CRON_SECRET; vercel.json cron 21:30 UTC = 04:30 WIB).
+  Dashboard: collapsed `MorningReportCard` (date + first-line preview, expand, Refresh
+  fallback via `refreshMorningReport` action, "Generate now" empty state). Cat page: brief
+  renamed **Health analysis**; health analysis + vet summary now persisted per cat
+  (best-effort pre-005) and shown instantly on next visit. Reads of `ai_briefs` degrade to
+  null pre-migration.
 
 ## Recent session (2026-07-12, day — litter AI)
 - [x] **Litter photo AI analysis** (owner-requested): `analyzeLitterPhoto` action reads the
