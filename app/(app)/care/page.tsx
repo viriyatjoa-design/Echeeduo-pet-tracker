@@ -11,6 +11,7 @@ import { CareEventForm } from "@/components/care/care-event-form";
 import { MedCourseForm } from "@/components/care/med-course-form";
 import { CompleteButton } from "@/components/care/complete-button";
 import { RescheduleForm } from "@/components/care/reschedule-form";
+import { RemoveEventButton } from "@/components/care/remove-event-button";
 import { strings } from "@/lib/strings";
 
 const t = {
@@ -56,13 +57,18 @@ function CareRow({
         </div>
       </div>
       <div className="flex items-center justify-end gap-1">
+        <RemoveEventButton id={event.id} title={event.title} />
         <RescheduleForm
           id={event.id}
           dueDate={event.due_date}
           dueTime={event.due_time}
           iconOnly
         />
-        <CompleteButton id={event.id} className="min-w-28" />
+        <CompleteButton
+          id={event.id}
+          dueDate={event.due_date}
+          className="min-w-28"
+        />
       </div>
     </li>
   );

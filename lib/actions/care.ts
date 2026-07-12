@@ -70,6 +70,25 @@ export async function createCareEvent(input: CreateCareEventInput) {
   revalidate();
 }
 
+/**
+ * Remove an event from every view — soft delete (SPEC §2.6: never hard-delete).
+ * Works on open AND completed events; use it to clean up mistakes (accidental
+ * "Done", duplicate entries). The row stays in the DB with is_active = false.
+ */
+export async function removeCareEvent(id: string) {
+  const me = await getCurrentAppUser();
+  if (!me) throw new Error("Unauthorized");
+  if (!id) throw new Error("Missing event id.");
+
+  const { error } = await db()
+    .from("care_events")
+    .update({ is_active: false })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidate();
+}
+
 export type LogPastCareEventInput = {
   cat_id: string;
   event_type_id: string;

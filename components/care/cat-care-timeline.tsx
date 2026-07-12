@@ -3,6 +3,7 @@ import { getCareEventsByCat, getCareTypeLabels } from "@/lib/care-queries";
 import { isOverdue } from "@/lib/care";
 import { relativeDay, formatDate } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
+import { RemoveEventButton } from "@/components/care/remove-event-button";
 import { AttachmentGallery } from "@/components/attachments/attachment-gallery";
 import { AttachmentUploader } from "@/components/attachments/attachment-uploader";
 import type { UUID } from "@/lib/types";
@@ -70,11 +71,14 @@ export async function CatCareTimeline({ catId }: { catId: UUID }) {
                         : t.anytime}
                   </p>
                 </div>
-                <Badge
-                  variant={done ? "success" : late ? "destructive" : "secondary"}
-                >
-                  {done ? t.done : late ? t.overdue : t.open}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Badge
+                    variant={done ? "success" : late ? "destructive" : "secondary"}
+                  >
+                    {done ? t.done : late ? t.overdue : t.open}
+                  </Badge>
+                  <RemoveEventButton id={e.id} title={e.title} />
+                </div>
               </div>
 
               {e.vet_name && (

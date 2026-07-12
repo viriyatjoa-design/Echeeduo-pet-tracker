@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import type { ButtonProps } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { completeCareEvent } from "@/lib/actions/care";
-import { relativeDay } from "@/lib/time";
+import { relativeDay, todayInTz } from "@/lib/time";
 import { strings } from "@/lib/strings";
 
 const t = {
   done: "Marked done",
   nextUp: (d: string) => `Next up ${d}`,
+  earlyConfirm: (d: string) =>
+    `This isn't due until ${d}. Mark it done anyway? (For recurring care this also schedules the next one from today.)`,
 } as const;
 
 /**
@@ -20,6 +22,7 @@ const t = {
  */
 export function CompleteButton({
   id,
+  dueDate,
   variant = "outline",
   size = "default",
   className,
@@ -27,6 +30,8 @@ export function CompleteButton({
   iconOnly = false,
 }: {
   id: string;
+  /** 'YYYY-MM-DD'. When in the future, completing asks for confirmation first. */
+  dueDate?: string | null;
   label?: string;
   iconOnly?: boolean;
 } & Pick<ButtonProps, "variant" | "size" | "className">) {
@@ -34,6 +39,12 @@ export function CompleteButton({
   const [pending, startTransition] = React.useTransition();
 
   function onClick() {
+    // Guard against accidental early completion — each "Done" on a recurring
+    // event is real (it chains the next occurrence), so a stray tap on an
+    // upcoming item would silently march the schedule forward.
+    if (dueDate && dueDate > todayInTz()) {
+      if (!window.confirm(t.earlyConfirm(relativeDay(dueDate)))) return;
+    }
     startTransition(async () => {
       try {
         const { nextDueDate } = await completeCareEvent(id);
