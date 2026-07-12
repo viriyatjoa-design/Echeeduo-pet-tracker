@@ -63,6 +63,15 @@ link in your inbox (open it on the same device/browser), and you're in. An email
 Sign in, go to **Settings → Members → Add**, enter her email + name. She can now sign in with
 a magic link immediately. Deactivating a member blocks them but keeps their history.
 
+## AI features (optional — Kimi/Moonshot)
+The AI health brief / vet summary (cat profile → Health tab) and the food label
+scanner (Catalog → food form) need two env vars in Vercel:
+`MOONSHOT_API_KEY` (from platform.moonshot.ai) and `MOONSHOT_MODEL` (the model
+you picked, e.g. Kimi K2.6's ID from the console). Redeploy after adding.
+Without them the app works normally — the AI buttons just show a setup note.
+The label scanner needs a vision-capable model. The AI never sees your keys or
+account — it receives only the cat data needed for each request, server-side.
+
 ## Notes
 - **Auth choice:** we use Supabase magic-link instead of the Zitadel described in `SPEC.md`
   (see `CONTEXT.md` for why + the exact pattern). The authorization model — the `app_users`
