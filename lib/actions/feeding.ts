@@ -121,6 +121,9 @@ export async function logFeed(input: {
         .eq("cat_id", input.cat_id)
         .eq("is_active", true)
         .order("measured_at", { ascending: false })
+        // Same-day re-weigh tiebreak as the dashboard (weight-queries.ts), so
+        // the save-time treat toast and the card's badge use the SAME weight.
+        .order("created_at", { ascending: false })
         .limit(1),
       getTodayKcalByCat(),
     ]);
@@ -242,7 +245,9 @@ export async function applyMealTemplate(input: {
         .select("cat_id, weight_grams, measured_at")
         .in("cat_id", snackCatIds)
         .eq("is_active", true)
-        .order("measured_at", { ascending: false }),
+        .order("measured_at", { ascending: false })
+        // Match the dashboard's same-day tiebreak (weight-queries.ts).
+        .order("created_at", { ascending: false }),
       getTodayKcalByCat(),
     ]);
     const latestWeightByCat = new Map<string, number>();

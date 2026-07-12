@@ -6,7 +6,7 @@ import { getCareTypeLabels } from "@/lib/care-queries";
 import { dailyTarget } from "@/lib/kcal";
 import { gramsToKg } from "@/lib/weight";
 import { getRestockWarnings } from "@/lib/restock";
-import { todayInTz, addDaysToDate, APP_TZ } from "@/lib/time";
+import { todayInTz, addDaysToDate, relativeDay, APP_TZ } from "@/lib/time";
 import type { AIBrief, Cat, UUID, WeightLog } from "@/lib/types";
 
 /**
@@ -35,8 +35,13 @@ export async function getLatestBrief(
     .limit(1);
   q = catId ? q.eq("cat_id", catId) : q.is("cat_id", null);
   const { data, error } = await q.maybeSingle();
-  // Graceful pre-migration read: a missing table just means "no brief yet".
-  if (error) return null;
+  if (error) {
+    // Only the pre-migration missing-table case means "no brief yet". A
+    // transient error must NOT masquerade as empty and hide a stored brief —
+    // rethrow so the caller can show an error/retry state instead.
+    if (/ai_briefs|relation|does not exist/i.test(error.message)) return null;
+    throw new Error(error.message);
+  }
   return (data as AIBrief | null) ?? null;
 }
 
@@ -62,6 +67,19 @@ export async function saveBrief(input: {
         ? MIGRATION_005_HINT
         : error.message,
     );
+  }
+}
+
+/**
+ * Persist a brief but never let a persistence failure lose an
+ * already-generated (paid) report: pre-migration-005 or a transient write
+ * error degrades to ephemeral display instead of throwing away the text.
+ */
+async function saveBriefBestEffort(input: Parameters<typeof saveBrief>[0]) {
+  try {
+    await saveBrief(input);
+  } catch {
+    // best-effort — the caller still returns the generated text
   }
 }
 
@@ -126,7 +144,11 @@ export async function generateMorningReport(
         .gte("logged_at", sinceIso),
       database
         .from("litter_logs")
-        .select("cat_id, urine, stool, stool_consistency_id, notes, ai_analysis, observed_at")
+        // Do NOT name ai_analysis (migration 004) — pre-004 that column is
+        // missing and PostgREST would reject the whole SELECT, silently
+        // dropping ALL litter and producing a false "quiet day". Consumers
+        // below optional-chain ai_analysis, so omitting it is safe.
+        .select("cat_id, urine, stool, stool_consistency_id, notes, observed_at")
         .eq("is_active", true)
         .gte("observed_at", sinceIso),
       database
@@ -140,7 +162,9 @@ export async function generateMorningReport(
         .eq("is_active", true)
         .order("measured_at", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(60),
+        // Generous cap so a heavily-weighed cat can't push another cat's latest
+        // weight out of the result set (which would null its kcal target).
+        .limit(1000),
       database
         .from("care_events")
         .select("cat_id, title, event_type_id, done_at")
@@ -174,7 +198,7 @@ export async function generateMorningReport(
       (w) => w.measured_at >= addDaysToDate(today, -1),
     );
 
-    const quiet =
+    const noActivity =
       feeds.length === 0 &&
       water.length === 0 &&
       litter.length === 0 &&
@@ -182,15 +206,37 @@ export async function generateMorningReport(
       weightsInWindow.length === 0 &&
       careDone.length === 0;
 
-    if (quiet) {
-      await saveBrief({
+    // Restock + overdue/due-today care are heads-up material even on a day with
+    // no logged activity — the morning most in need of the nudge. Compute them
+    // before deciding "quiet" so they're never silently dropped.
+    const restock = await getRestockWarnings().catch(
+      () => [] as { text: string }[],
+    );
+    const careLabelFor = (c: { title: string | null; event_type_id: string }) =>
+      c.title || careLabels.get(c.event_type_id) || "Care";
+    const urgentCare = (
+      careDue as { title: string | null; event_type_id: string; due_date: string }[]
+    )
+      .filter((c) => c.due_date <= today) // overdue or due today
+      .map((c) => `${careLabelFor(c)} — ${relativeDay(c.due_date)}`);
+    const headsUp = [...urgentCare, ...restock.map((w) => w.text)];
+
+    // A quiet day skips the (slow, paid) AI call. When there's nothing logged
+    // AND nothing to flag, it's the fixed line; when nothing was logged but
+    // there ARE urgent items, append them WITHOUT an AI call.
+    if (noActivity) {
+      let text = QUIET_DAY_TEXT;
+      if (headsUp.length > 0) {
+        text += `\n\nHeads up:\n${headsUp.map((l) => `- ${l}`).join("\n")}`;
+      }
+      await saveBriefBestEffort({
         kind: "morning_report",
         catId: null,
-        content: QUIET_DAY_TEXT,
+        content: text,
         model: null,
         createdBy,
       });
-      return { ok: true, text: QUIET_DAY_TEXT, quiet: true };
+      return { ok: true, text, quiet: headsUp.length === 0 };
     }
 
     // Latest weight per cat (any age) for kcal targets.
@@ -223,7 +269,6 @@ export async function generateMorningReport(
             stool: l.stool,
             consistency: label(l.stool_consistency_id),
             notes: l.notes,
-            photo_ai: l.ai_analysis ? l.ai_analysis.slice(0, 200) : undefined,
           })),
         symptoms: symptoms
           .filter((s) => s.cat_id === cat.id)
@@ -247,11 +292,6 @@ export async function generateMorningReport(
       };
     });
 
-    // Supplies running low / short for upcoming care → Heads up material.
-    const restock = await getRestockWarnings().catch(
-      () => [] as { text: string }[],
-    );
-
     const data = {
       date: today,
       cats: perCat,
@@ -261,7 +301,6 @@ export async function generateMorningReport(
           urine: l.urine,
           stool: l.stool,
           consistency: label(l.stool_consistency_id),
-          photo_ai: l.ai_analysis ? l.ai_analysis.slice(0, 200) : undefined,
         })),
       restock_warnings: restock.map((w) => w.text),
     };
@@ -280,7 +319,9 @@ export async function generateMorningReport(
       ],
     });
 
-    await saveBrief({
+    // Best-effort: an already-generated (paid) report must survive a pre-005
+    // or transient write failure by degrading to ephemeral display.
+    await saveBriefBestEffort({
       kind: "morning_report",
       catId: null,
       content: text,

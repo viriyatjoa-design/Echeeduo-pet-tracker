@@ -175,8 +175,9 @@ export function CatForm({
         {trigger ?? (
           <Button
             variant={isEdit ? "ghost" : "default"}
-            size={isEdit ? "sm" : "default"}
-            className={isEdit ? "w-9 px-0" : undefined}
+            // size="icon" is 44x44 — keeps the icon-only trigger compact
+            // without dropping below the tap-target minimum.
+            size={isEdit ? "icon" : "default"}
           >
             {isEdit ? (
               <>

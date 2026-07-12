@@ -100,7 +100,7 @@ export async function askAI({
   if (!content.trim()) {
     if (finish === "length") {
       throw new Error(
-        "The AI ran out of tokens while thinking — tap again (budget was raised).",
+        "The AI ran out of room while thinking before it could answer — try again, or simplify the request if it keeps happening.",
       );
     }
     throw new Error(
@@ -119,9 +119,17 @@ export function parseAIJson<T>(raw: string): T {
   try {
     return JSON.parse(unfenced) as T;
   } catch {
-    // last resort: first {...} block
+    // last resort: first {...} block. The regex only guarantees balanced outer
+    // braces, not valid JSON, so this parse can itself throw — swallow it and
+    // fall through to the friendly error rather than leaking a raw SyntaxError.
     const m = unfenced.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]) as T;
+    if (m) {
+      try {
+        return JSON.parse(m[0]) as T;
+      } catch {
+        // fall through
+      }
+    }
     throw new Error("AI response wasn't valid JSON — try again.");
   }
 }

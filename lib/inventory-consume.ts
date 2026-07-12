@@ -83,13 +83,24 @@ export async function consumeForFeedings(
     }
     if (movements.length === 0) return;
 
-    // One bulk insert for all movements.
-    const { error: moveErr } = await database
+    // One bulk insert for all movements; keep the ids to enable per-item rollback.
+    const { data: inserted, error: moveErr } = await database
       .from("stock_movements")
-      .insert(movements);
+      .insert(movements)
+      .select("id, item_id");
     if (moveErr) throw new Error(moveErr.message);
 
-    // Decrement each affected item's quantity (floored at 0).
+    const movementIdsByItem = new Map<string, string[]>();
+    for (const m of (inserted ?? []) as { id: string; item_id: string }[]) {
+      const list = movementIdsByItem.get(m.item_id) ?? [];
+      list.push(m.id);
+      movementIdsByItem.set(m.item_id, list);
+    }
+
+    // Decrement each affected item's quantity (floored at 0). If an item's
+    // update fails, void THAT item's just-inserted movements so its ledger and
+    // cached quantity stay consistent — and keep going for the other items
+    // (don't throw, or one failure aborts the rest and abandons their movements).
     const quantityByItem = new Map(
       items.map((i) => [i.id as string, Number(i.quantity)]),
     );
@@ -100,7 +111,15 @@ export async function consumeForFeedings(
         .from("inventory_items")
         .update({ quantity: next })
         .eq("id", itemId);
-      if (updErr) throw new Error(updErr.message);
+      if (updErr) {
+        const ids = movementIdsByItem.get(itemId) ?? [];
+        if (ids.length) {
+          await database
+            .from("stock_movements")
+            .update({ is_active: false })
+            .in("id", ids);
+        }
+      }
     }
   } catch (err) {
     // Consumption is best-effort: never let inventory break a feeding.

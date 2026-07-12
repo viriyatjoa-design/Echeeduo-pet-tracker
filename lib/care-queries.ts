@@ -15,9 +15,13 @@ export type CareEventWithCat = CareEvent & { cat: Cat };
 export async function getOpenCareEvents(): Promise<CareEventWithCat[]> {
   const { data, error } = await db()
     .from("care_events")
-    .select("*, cat:cats(*)")
+    // `cats!inner` + the cat.is_active filter drops events belonging to a
+    // deactivated cat — otherwise a rehomed cat's recurring care keeps showing
+    // (and re-chaining on Done) on /care.
+    .select("*, cat:cats!inner(*)")
     .is("done_at", null)
     .eq("is_active", true)
+    .eq("cat.is_active", true)
     .order("due_date", { ascending: true, nullsFirst: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as CareEventWithCat[];

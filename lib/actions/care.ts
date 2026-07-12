@@ -32,6 +32,20 @@ function revalidate() {
   revalidatePath("/", "layout");
 }
 
+const MIGRATION_006_HINT =
+  "Inventory link needs migration 006_care_consume.sql — run it in the Supabase SQL Editor, or save without the inventory link.";
+
+/** Friendly message when an insert fails only because the 006 columns are missing. */
+function careInsertError(
+  error: { message?: string },
+  linkedInventory: boolean,
+): Error {
+  if (linkedInventory && /consume_item_id|consume_qty|column/i.test(error.message ?? "")) {
+    return new Error(MIGRATION_006_HINT);
+  }
+  return new Error(error.message ?? "Something went wrong.");
+}
+
 /**
  * Consume qty per dose: 0.5-steps ≥ 0.5 (owner: dewormer is 1 pill or half a
  * pill; flea is 1 tube). Returns null when no item is linked.
@@ -76,25 +90,37 @@ async function consumeForCareEvent(
       .maybeSingle();
     if (!item) return;
 
-    const { error: moveErr } = await database.from("stock_movements").insert({
-      item_id: itemId,
-      delta: -qty,
-      reason_id: reason.id,
-      ref_entity_type: "care_event",
-      ref_entity_id: eventId,
-      created_by: byUserId,
-    });
-    if (moveErr) return;
+    const { data: movement, error: moveErr } = await database
+      .from("stock_movements")
+      .insert({
+        item_id: itemId,
+        delta: -qty,
+        reason_id: reason.id,
+        ref_entity_type: "care_event",
+        ref_entity_id: eventId,
+        created_by: byUserId,
+      })
+      .select("id")
+      .single();
+    if (moveErr || !movement) return;
 
     // Cached quantity clamps at 0 — the ledger keeps the true delta.
     const newQty = Math.max(
       0,
       Math.round((Number(item.quantity) - qty) * 10) / 10,
     );
-    await database
+    const { error: updErr } = await database
       .from("inventory_items")
       .update({ quantity: newQty })
       .eq("id", itemId);
+    if (updErr) {
+      // Ledger + cache must not diverge: void the movement we just wrote
+      // (mirrors purchaseStock/adjustStock/openOnePack).
+      await database
+        .from("stock_movements")
+        .update({ is_active: false })
+        .eq("id", movement.id);
+    }
   } catch {
     // Best-effort by design.
   }
@@ -235,7 +261,7 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
     pastRow.consume_qty = consume.qty;
   }
   const { error } = await database.from("care_events").insert(pastRow);
-  if (error) throw new Error(error.message);
+  if (error) throw careInsertError(error, !!consume);
 
   // Chain the next occurrence from the HISTORICAL date. May land in the past —
   // that's correct: it shows as overdue, which is true.
@@ -256,7 +282,7 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
       nextRow.consume_qty = consume.qty;
     }
     const { error: insErr } = await database.from("care_events").insert(nextRow);
-    if (insErr) throw new Error(insErr.message);
+    if (insErr) throw careInsertError(insErr, !!consume);
   }
 
   revalidate();
@@ -313,6 +339,7 @@ export async function completeCareEvent(
       event_type_id: e.event_type_id,
       title: e.title,
       due_date: next,
+      due_time: e.due_time, // carry the time forward (e.g. a daily 08:00 dose)
       interval_days: e.interval_days,
       vet_name: e.vet_name,
       created_by: me.id,
