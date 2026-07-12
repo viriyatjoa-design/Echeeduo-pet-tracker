@@ -320,7 +320,7 @@ export function ItemForm({
                 {strings.common.cancel}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !typeId || !unitId}>
               {pending ? strings.common.loading : strings.common.save}
             </Button>
           </DialogFooter>

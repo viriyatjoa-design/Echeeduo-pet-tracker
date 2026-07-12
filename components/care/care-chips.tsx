@@ -92,12 +92,14 @@ function Chip({
     >
       <span className="truncate">{event.title}</span>
       <span className="opacity-70">· {label}</span>
+      {/* 36px button pulled in with -my-2 so the chip stays visually compact;
+          the ::after overlay (-inset-1) stretches the hit area to 44px. */}
       <button
         type="button"
         onClick={complete}
         disabled={pending}
         aria-label={`Mark ${event.title} done`}
-        className="ml-0.5 grid h-5 w-5 place-items-center rounded-full transition-colors hover:bg-background/40 disabled:opacity-50"
+        className="relative -my-2 ml-0.5 grid h-9 w-9 place-items-center rounded-full transition-colors after:absolute after:-inset-1 hover:bg-background/40 disabled:opacity-50"
       >
         <Check className="h-3.5 w-3.5" />
       </button>

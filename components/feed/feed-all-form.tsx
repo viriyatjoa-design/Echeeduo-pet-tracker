@@ -95,15 +95,15 @@ export function FeedAllForm({
           const food = foodById.get(it.food_id)!;
           let amount = initialAmount(food);
           if (it.qty != null && foodHasUnit(food)) {
-            amount = { mode: "portion", qty: Number(it.qty), grams: amount.grams };
+            amount = { mode: "portion", qty: String(it.qty), grams: amount.grams };
           } else if (it.grams != null) {
-            amount = { mode: "grams", qty: 1, grams: String(it.grams) };
+            amount = { mode: "grams", qty: "1", grams: String(it.grams) };
           } else if (it.qty != null) {
             // Template stored a portion but the food no longer has a unit —
             // the portion can't resolve to grams. Leave the amount empty so
             // the save validation forces an explicit entry instead of
             // silently substituting the default serving.
-            amount = { mode: "grams", qty: 1, grams: "" };
+            amount = { mode: "grams", qty: "1", grams: "" };
           }
           return { catId: it.cat_id, foodId: it.food_id, amount, skip: false };
         })
@@ -278,7 +278,7 @@ export function FeedAllForm({
                           <SelectContent>
                             {foods.map((f) => (
                               <SelectItem key={f.id} value={f.id}>
-                                {f.name}
+                                {f.brand ? `${f.name} · ${f.brand}` : f.name}
                               </SelectItem>
                             ))}
                           </SelectContent>

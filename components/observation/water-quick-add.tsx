@@ -27,6 +27,7 @@ const t = {
   saved: (ml: number, name: string) => `+${ml} ml logged for ${name}`,
   error: "Couldn't log water",
   noCat: "Pick a cat first.",
+  invalid: "Enter ml greater than 0",
 } as const;
 
 const PRESETS = [25, 50, 100] as const;
@@ -48,6 +49,8 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = React.useTransition();
+  // Which preset chip is in flight — so only that chip shows a spinner.
+  const [pendingPreset, setPendingPreset] = React.useState<number | null>(null);
   const [selected, setSelected] = React.useState<string>(
     catId ?? cats[0]?.id ?? "",
   );
@@ -56,12 +59,13 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
   const lockCat = cats.length === 1;
   const activeCat = cats.find((c) => c.id === selected) ?? cats[0];
 
-  function submit(ml: number) {
+  function submit(ml: number, preset?: number) {
     if (!selected) {
       toast({ title: t.noCat, variant: "warning" });
       return;
     }
     const name = activeCat?.name ?? "cat";
+    setPendingPreset(preset ?? null);
     startTransition(async () => {
       try {
         await logWater({ cat_id: selected, ml });
@@ -74,6 +78,8 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
           description: err instanceof Error ? err.message : undefined,
           variant: "destructive",
         });
+      } finally {
+        setPendingPreset(null);
       }
     });
   }
@@ -81,7 +87,10 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
   function submitCustom(e: React.FormEvent) {
     e.preventDefault();
     const ml = Math.round(Number(custom));
-    if (!Number.isFinite(ml) || ml <= 0) return;
+    if (!Number.isFinite(ml) || ml <= 0) {
+      toast({ title: t.invalid, variant: "destructive" });
+      return;
+    }
     submit(ml);
   }
 
@@ -111,9 +120,9 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
             variant="secondary"
             size="pill"
             disabled={pending || !selected}
-            onClick={() => submit(ml)}
+            onClick={() => submit(ml, ml)}
           >
-            {pending ? (
+            {pendingPreset === ml ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>

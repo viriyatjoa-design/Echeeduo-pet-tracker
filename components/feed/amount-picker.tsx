@@ -18,7 +18,9 @@ import type { Food } from "@/lib/types";
 
 export type AmountValue = {
   mode: "portion" | "grams";
-  qty: number;
+  /** Raw text — kept as typed (like `grams`) so entries such as "0.75" survive
+   *  keystroke-by-keystroke; parsed only where grams are resolved. */
+  qty: string;
   grams: string;
 };
 
@@ -46,7 +48,7 @@ export function initialAmount(food: Food): AmountValue {
         : null;
   return {
     mode: hasUnit ? "portion" : "grams",
-    qty: 1,
+    qty: "1",
     grams: prefill != null ? String(round1(Number(prefill))) : "",
   };
 }
@@ -54,7 +56,10 @@ export function initialAmount(food: Food): AmountValue {
 /** Canonical grams for the current amount (0 when not resolvable). */
 export function resolveGrams(food: Food, v: AmountValue): number {
   if (v.mode === "portion" && foodHasUnit(food)) {
-    return gramsFromPortion(v.qty, Number(food.unit_grams));
+    const q = Number(v.qty);
+    return Number.isFinite(q) && q > 0
+      ? gramsFromPortion(q, Number(food.unit_grams))
+      : 0;
   }
   const g = Number(v.grams);
   return Number.isFinite(g) && g > 0 ? round1(g) : 0;
@@ -67,7 +72,11 @@ export function resolveSnapshot(
   unitLabel: string | null,
 ): { grams: number; qty: number | null; unit_label: string | null } {
   if (v.mode === "portion" && foodHasUnit(food)) {
-    return { grams: resolveGrams(food, v), qty: v.qty, unit_label: unitLabel };
+    return {
+      grams: resolveGrams(food, v),
+      qty: Number(v.qty),
+      unit_label: unitLabel,
+    };
   }
   return { grams: resolveGrams(food, v), qty: null, unit_label: null };
 }
@@ -86,8 +95,11 @@ export function AmountPicker({
   const hasUnit = foodHasUnit(food);
   const grams = resolveGrams(food, value);
   const kcal = kcalFromGrams(grams, Number(food.kcal_per_100g));
+  // String comparison so intermediate text ("0.", "1.") stays in the input
+  // instead of collapsing to a chip's canonical value mid-keystroke.
   const isCustomQty =
-    value.mode === "portion" && !PORTION_CHIPS.some((c) => c.qty === value.qty);
+    value.mode === "portion" &&
+    !PORTION_CHIPS.some((c) => String(c.qty) === value.qty);
 
   function step(delta: number) {
     const cur = Number(value.grams) || 0;
@@ -123,10 +135,10 @@ export function AmountPicker({
               <button
                 key={c.label}
                 type="button"
-                onClick={() => onChange({ ...value, qty: c.qty })}
+                onClick={() => onChange({ ...value, qty: String(c.qty) })}
                 className={cn(
                   "h-10 min-w-[2.75rem] rounded-xl border px-3 text-base font-semibold transition-colors",
-                  value.qty === c.qty
+                  Number(value.qty) === c.qty
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card text-foreground hover:bg-accent",
                 )}
@@ -144,15 +156,9 @@ export function AmountPicker({
               inputMode="decimal"
               min="0"
               step="0.25"
-              value={isCustomQty ? String(value.qty) : ""}
+              value={isCustomQty ? value.qty : ""}
               placeholder="e.g. 0.75"
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                onChange({
-                  ...value,
-                  qty: Number.isFinite(n) && n > 0 ? n : 0,
-                });
-              }}
+              onChange={(e) => onChange({ ...value, qty: e.target.value })}
               className="h-10 w-28"
             />
           </div>

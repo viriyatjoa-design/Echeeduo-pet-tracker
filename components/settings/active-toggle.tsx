@@ -8,6 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { strings } from "@/lib/strings";
 import { Button } from "@/components/ui/button";
 
+const t = {
+  confirmDeactivate: (name: string) =>
+    `Deactivate ${name}? They'll be hidden everywhere but history is kept.`,
+} as const;
+
 /**
  * Activate/deactivate toggle shared by the settings cat rows and member rows.
  * Calls the matching server action for `kind`; the action revalidates.
@@ -30,6 +35,12 @@ export function ActiveToggle({
   async function handleClick() {
     if (pending) return;
     const next = !active;
+    // Deactivating hides the cat/member everywhere — confirm that direction
+    // only (re-activating is harmless). Matches inventory/action-menu.
+    if (!next) {
+      const name = label ?? (kind === "cat" ? "this cat" : "this member");
+      if (!window.confirm(t.confirmDeactivate(name))) return;
+    }
     setPending(true);
     try {
       if (kind === "cat") await setCatActive(id, next);

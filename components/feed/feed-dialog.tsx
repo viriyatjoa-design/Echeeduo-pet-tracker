@@ -17,28 +17,42 @@ import { QuickFeed, type FeedData } from "./quick-feed";
  * Quick-feed in a dialog — the same flow the /log/feed page renders, so the
  * dashboard FAB (Phase C) can mount it without a route change. Pass a custom
  * `trigger` (rendered `asChild`) to wire it to a FAB menu item; otherwise a
- * default button is shown.
+ * default button is shown. Pass `open`/`onOpenChange` to control it externally
+ * (no trigger is rendered then) — internal state is the uncontrolled fallback.
  */
 export function FeedDialog({
   trigger,
   initialCatId,
+  open,
+  onOpenChange,
   ...data
 }: FeedData & {
   trigger?: React.ReactNode;
   initialCatId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
+  const controlled = open !== undefined;
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isOpen = controlled ? open! : internalOpen;
+
+  function setOpen(next: boolean) {
+    if (controlled) onOpenChange?.(next);
+    else setInternalOpen(next);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button type="button">
-            <Utensils className="h-4 w-4" />
-            {strings.feed.title}
-          </Button>
-        )}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setOpen}>
+      {!controlled && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button type="button">
+              <Utensils className="h-4 w-4" />
+              {strings.feed.title}
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{strings.feed.title}</DialogTitle>

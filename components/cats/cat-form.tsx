@@ -302,6 +302,7 @@ export function CatForm({
               <Input
                 aria-label={`${t.bcs} min`}
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="9"
                 className="w-20"
@@ -312,6 +313,7 @@ export function CatForm({
               <Input
                 aria-label={`${t.bcs} max`}
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="9"
                 className="w-20"

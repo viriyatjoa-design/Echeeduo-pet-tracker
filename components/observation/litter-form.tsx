@@ -47,6 +47,7 @@ const t = {
   addPhoto: "Add photo",
   saved: "Litter logged",
   error: "Couldn't log litter",
+  photoFailed: "Saved — photo upload failed, add it later from the journal",
 } as const;
 
 export type LitterFormProps = {
@@ -100,17 +101,29 @@ export function LitterForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
+      let id: string;
       try {
-        const id = await logLitter({
+        id = await logLitter({
           cat_id: catId === HOUSEHOLD ? null : catId,
           urine,
           stool,
           stool_consistency_id: stool && consistencyId ? consistencyId : null,
           notes,
         });
+      } catch (err) {
+        toast({
+          title: t.error,
+          description: err instanceof Error ? err.message : undefined,
+          variant: "destructive",
+        });
+        return;
+      }
 
-        // Photo-then-id: the row exists, now attach the (optional) photo to it.
-        if (file) {
+      // Photo-then-id: the row exists, now attach the (optional) photo to it.
+      // The row is saved either way — an upload failure must still close the
+      // dialog, or re-saving would duplicate the row.
+      if (file) {
+        try {
           const compressed = await compressImage(file);
           const fd = new FormData();
           fd.set("entityType", "litter_log");
@@ -118,18 +131,17 @@ export function LitterForm({
           fd.set("revalidate", "/journal");
           fd.set("file", compressed);
           await uploadAttachmentAction(fd);
+        } catch {
+          toast({ title: t.photoFailed, variant: "warning" });
+          setOpen(false);
+          router.refresh();
+          return;
         }
-
-        toast({ title: t.saved, variant: "success" });
-        setOpen(false);
-        router.refresh();
-      } catch (err) {
-        toast({
-          title: t.error,
-          description: err instanceof Error ? err.message : undefined,
-          variant: "destructive",
-        });
       }
+
+      toast({ title: t.saved, variant: "success" });
+      setOpen(false);
+      router.refresh();
     });
   }
 

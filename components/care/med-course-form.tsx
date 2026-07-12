@@ -219,7 +219,7 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
                 {strings.common.cancel}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !catId}>
               {pending ? strings.common.loading : strings.common.save}
             </Button>
           </DialogFooter>

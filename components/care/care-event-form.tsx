@@ -248,7 +248,7 @@ export function CareEventForm({
                 {strings.common.cancel}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !catId || !typeId}>
               {pending ? strings.common.loading : strings.common.save}
             </Button>
           </DialogFooter>

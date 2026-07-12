@@ -45,6 +45,7 @@ const t = {
   addPhoto: "Add photo",
   saved: "Symptom logged",
   error: "Couldn't log symptom",
+  photoFailed: "Saved — photo upload failed, add it later from the health tab",
 } as const;
 
 const SEVERITIES = [1, 2, 3] as const;
@@ -98,16 +99,28 @@ export function SymptomForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
+      let id: string;
       try {
-        const id = await logSymptom({
+        id = await logSymptom({
           cat_id: catId,
           symptom_type_id: typeId,
           severity,
           notes,
         });
+      } catch (err) {
+        toast({
+          title: t.error,
+          description: err instanceof Error ? err.message : undefined,
+          variant: "destructive",
+        });
+        return;
+      }
 
-        // Photo-then-id: attach the optional photo to the freshly-created row.
-        if (file) {
+      // Photo-then-id: attach the optional photo to the freshly-created row.
+      // The row is saved either way — an upload failure must still close the
+      // dialog, or re-saving would duplicate the row.
+      if (file) {
+        try {
           const compressed = await compressImage(file);
           const fd = new FormData();
           fd.set("entityType", "symptom_log");
@@ -115,18 +128,17 @@ export function SymptomForm({
           fd.set("revalidate", "/journal");
           fd.set("file", compressed);
           await uploadAttachmentAction(fd);
+        } catch {
+          toast({ title: t.photoFailed, variant: "warning" });
+          setOpen(false);
+          router.refresh();
+          return;
         }
-
-        toast({ title: t.saved, variant: "success" });
-        setOpen(false);
-        router.refresh();
-      } catch (err) {
-        toast({
-          title: t.error,
-          description: err instanceof Error ? err.message : undefined,
-          variant: "destructive",
-        });
       }
+
+      toast({ title: t.saved, variant: "success" });
+      setOpen(false);
+      router.refresh();
     });
   }
 
@@ -242,7 +254,7 @@ export function SymptomForm({
                 {strings.common.cancel}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || !catId || !typeId}>
               {pending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
