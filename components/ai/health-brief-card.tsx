@@ -108,7 +108,7 @@ export function HealthBriefCard({
         <CardTitle className="text-base">{t.title}</CardTitle>
         <CardDescription>
           Reads {catName}&apos;s last 30 days in depth — the latest result is
-          saved here. Not a vet — patterns only.
+          saved here. Practical pointers, not a vet diagnosis.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

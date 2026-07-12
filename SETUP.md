@@ -82,10 +82,11 @@ request, server-side.
 
 **Litter photo analysis** (run migration `004_litter_ai.sql` first): when you
 log litter with a photo, the AI automatically reads it and writes a short
-stool/urine observation (color, consistency, size, anything worth mentioning
-to the vet) onto the entry. On any litter entry you can **Refresh** the
-analysis or **Update photo** (which re-analyzes). It's a description, not a
-diagnosis — the vet summary includes these observations too.
+stool/urine observation onto the entry: what it sees (color, consistency,
+size), a soft read, and 1-2 practical suggestions (water, wet food, fiber) —
+or a clear "see your vet" if it spots a red flag. On any litter entry you can
+**Refresh** the analysis or **Update photo** (which re-analyzes). Practical
+pointers, not a diagnosis — the vet summary includes these observations too.
 
 **Speed (optional):** K2.6 is a "thinking" model — great for deep analyses,
 slow for quick jobs. Add `MOONSHOT_VISION_MODEL` in Vercel with a

@@ -37,15 +37,31 @@ function dayInTz(iso: string): string {
   }).format(new Date(iso));
 }
 
-const SYSTEM_PROMPT = `You are the health assistant inside "Purrfect Log", a family cat-care app used by a household in Jakarta (timezone Asia/Jakarta). You receive structured JSON data logged by the family and write clear, useful summaries.
+/**
+ * Family-facing analysis: soft reads + practical suggestions are allowed
+ * (owner-requested), definitive diagnoses are not, and red flags always
+ * escalate to "see your vet" instead of home tips.
+ */
+const FAMILY_SYSTEM_PROMPT = `You are the health assistant inside "Purrfect Log", a family cat-care app used by a household in Jakarta (timezone Asia/Jakarta). You receive structured JSON data logged by the family and write clear summaries they can act on.
 
 Rules:
-- You are NOT a veterinarian. Never diagnose. Frame concerns as "patterns worth mentioning to your vet".
+- You are not a veterinarian and never give a definitive diagnosis. You MAY give a soft read and 1-3 practical, low-risk suggestions a cat owner can try at home, tied to the data (e.g. "intake is ~20% under target — try adding a small wet-food meal", "stool has been hard twice this week — consider more water or wet food, a little extra fiber").
+- Red flags override home tips: visible blood, repeated vomiting, nothing eaten for 24h+, severity-3 symptoms, or a sudden weight change — then the advice is plainly "see your vet soon", nothing softer.
+- Logs can be incomplete — the family sometimes forgets to log. Phrase low counts as "only X logged", never as fact that the cat wasn't fed or didn't go.
 - Be concrete and quantitative: cite the numbers and dates from the data, don't vague-talk.
-- If data is sparse (few logs), say so plainly instead of inventing trends.
+- If data is sparse, say so plainly instead of inventing trends.
 - Metric units (grams, kg, ml, kcal). Dates as "12 Jul" style.
 - Plain text with simple "-" bullets and short section headers. No markdown tables, no bold/italics syntax.
 - Keep it tight: everything must earn its line.`;
+
+/** Vet-facing summary: strictly factual — the vet does the interpreting. */
+const VET_SYSTEM_PROMPT = `You prepare clinical visit summaries inside "Purrfect Log", a family cat-care app used by a household in Jakarta (timezone Asia/Jakarta). Your reader is the VETERINARIAN.
+
+Rules:
+- Strictly factual: report only what was logged, with dates and numbers. No interpretation, no diagnosis, no care suggestions — the vet does that.
+- Note data gaps explicitly (e.g. "no weight logged since 2 Jul") — an incomplete log is information.
+- Metric units (grams, kg, ml, kcal). Dates as "12 Jul" style.
+- Plain text with simple "-" bullets and short section headers. No markdown tables, no bold/italics syntax.`;
 
 async function gatherCatData(catId: string) {
   const { data: catRow, error } = await db()
@@ -173,10 +189,10 @@ export async function generateHealthBrief(catId: string): Promise<AIResult> {
     const data = await gatherCatData(catId);
     const text = await askAI({
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: FAMILY_SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Write a short health brief for ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns worth mentioning to the vet, or "nothing concerning" if so), "Coming up" (open care items). Under 250 words total.\n\nDATA:\n${JSON.stringify(data)}`,
+        content: `Write a health analysis of ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (logged intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns to keep an eye on or mention to the vet, or "nothing concerning" if so), "What you can try" (1-3 practical suggestions tied to the data — hydration, wet-food share, fiber, portion pacing; skip this section entirely if everything looks normal), "Coming up" (open care items). Under 280 words total.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
       maxTokens: 6000,
@@ -198,10 +214,10 @@ export async function generateVetSummary(catId: string): Promise<AIResult> {
     const data = await gatherCatData(catId);
     const text = await askAI({
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: VET_SYSTEM_PROMPT },
       {
         role: "user",
-        content: `Write a one-page summary of ${data.cat.name} for a VETERINARIAN visit. Clinical, factual, no speculation. Sections: "Patient" (signalment: breed, sex, neuter status, age if birth date known), "Weight & body condition" (trend with dates), "Diet & intake" (average daily kcal, target, appetite changes), "Elimination & water" (litter observations, water intake), "Recent symptoms" (dated list), "Care history" (vaccinations/treatments with dates — include everything dated), "Owner questions" (2-3 suggested questions based on the data). Under 350 words.\n\nDATA:\n${JSON.stringify(data)}`,
+        content: `Write a one-page summary of ${data.cat.name} for a VETERINARIAN visit. Sections: "Patient" (signalment: breed, sex, neuter status, age if birth date known), "Weight & body condition" (trend with dates), "Diet & intake" (average daily logged kcal, target, appetite changes), "Elimination & water" (litter observations, water intake), "Recent symptoms" (dated list), "Care history" (vaccinations/treatments with dates — include everything dated), "Owner questions" (2-3 suggested questions based on the data). Under 350 words.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
       maxTokens: 6000,
@@ -250,7 +266,7 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
       {
         role: "system",
         content:
-          'You read cat-food packaging photos and extract catalog data. Reply ONLY with a JSON object: {"name": string|null (product name incl. variant), "brand": string|null, "kcal_per_100g": number|null, "unit_grams": number|null (net weight of ONE can/pouch/sachet if this is a single-serve wet food; null for bags of dry food), "note": string|null (one short caveat, e.g. converted from kcal/kg, or what was unreadable)}. Energy conversions: kcal/kg ÷ 10 = kcal/100g; "ME 3800 kcal/kg" → 380. If a value is not clearly on the label, use null — never guess numbers.',
+          'You read cat-food packaging photos and extract catalog data. Labels may be in Indonesian, English, or any language — extract regardless and keep the product name as printed. Reply ONLY with a JSON object: {"name": string|null (product name incl. variant), "brand": string|null, "kcal_per_100g": number|null, "unit_grams": number|null (the PRINTED NET WEIGHT of ONE can/pouch/sachet, e.g. "Net weight 85 g" / "Berat bersih 85 g", if this is a single-serve wet food; NEVER a feeding-guide amount; null for bags of dry food), "note": string|null (one short caveat, e.g. converted from kcal/kg or kcal/can, or what was unreadable)}. Energy conversions: kcal/kg ÷ 10 = kcal/100g ("ME 3800 kcal/kg" → 380); if energy is only given per can/pouch AND the net weight is printed, compute kcal/100g from those and say so in note. If a value is not clearly on the label, use null — never guess numbers.',
       },
       {
         role: "user",
@@ -285,12 +301,14 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
   }
 }
 
-const LITTER_SYSTEM_PROMPT = `You look at litter-box photos inside "Purrfect Log", a family cat-care app. You describe what is VISIBLE in the photo — stool and/or urine clumps — so the family has a consistent written record.
+const LITTER_SYSTEM_PROMPT = `You look at litter-box photos inside "Purrfect Log", a family cat-care app. You describe what is VISIBLE — stool and/or urine clumps — and give the family a practical read, so they have a consistent record and know what to do next.
 
 Rules:
-- You are NOT a veterinarian. Never diagnose or name diseases. If something looks off, phrase it as "worth mentioning to your vet".
-- Describe only what you can actually see. If the photo is too unclear, or doesn't show stool/urine, say exactly that in one line and stop.
-- Plain text, short "-" bullets under tiny headers. No markdown syntax. Under 120 words.`;
+- Never a definitive diagnosis or a disease name as a conclusion. You MAY give a soft read plus low-risk care suggestions tied to what you see (e.g. firm/dry stool → more water or wet food, a little extra fiber; soft stool → note any recent food change, watch the next few boxes; lots of small urine clumps → keep an eye on water intake).
+- Red flags override suggestions: visible blood, black/tarry stool, worms, or watery diarrhea → say plainly that a vet visit soon is the right move, and skip home tips.
+- Describe only what you can actually see. Clumping litter coats everything: judge urine clumps by size and shape, not surface color, and say when litter coating limits what you can tell.
+- If the photo is too unclear or doesn't show stool/urine, say exactly that in one line and stop.
+- Plain text, short "-" bullets under tiny headers. No markdown syntax. Under 140 words.`;
 
 /**
  * Read the newest photo on a litter log and store a general stool/urine
@@ -349,7 +367,7 @@ export async function analyzeLitterPhoto(litterLogId: string): Promise<AIResult>
             { type: "image_url", image_url: { url: dataUrl } },
             {
               type: "text",
-              text: `The family logged this entry as: ${logged.join(", ") || "(nothing marked)"}. Analyze the photo. Format:\n\nWhat I see\n- color, consistency/texture, approximate size and amount, shape\n- anything notable: blood, mucus, unusually dark/pale color, visible parasites, very large or very small clumps\n\nReading\n- 1-2 bullets on what this generally looks like for a cat (healthy-looking / soft / dry, etc.), hedged, no diagnosis\n\nWorth mentioning to your vet\n- specific visible things a vet would want to know, or the single line "Nothing concerning visible."`,
+              text: `The family logged this entry as: ${logged.join(", ") || "(nothing marked)"}. Analyze the photo. Format:\n\nWhat I see\n- color, consistency/texture, approximate size and amount, shape\n- anything notable: blood, mucus, unusually dark/pale color, visible parasites, very large or very small clumps\n\nReading\n- 1-2 bullets: your soft read of what this generally suggests for a cat (e.g. "looks firm and dry — often a hydration or fiber thing"), hedged, no disease-name conclusions\n\nWhat you can try\n- 1-2 practical, low-risk suggestions tied to what you see (water intake, wet-food share, a little fiber, slower food transitions), or the single line "Nothing needed — this looks normal."\n- if you saw any red flag above, make this section exactly one line: see your vet soon and bring this photo.`,
             },
           ],
         },

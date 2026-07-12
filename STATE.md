@@ -22,6 +22,11 @@ Build-side:
   user-facing expected errors to returned values app-wide.
 
 ## Recent session (2026-07-12, day — morning report)
+- [x] **Prompt audit + soft-diagnosis policy** (owner-requested): family/vet prompts split
+  (family = soft reads + home suggestions + red-flag escalation; vet = strictly factual);
+  litter analysis gains "What you can try" section + litter-coating rule; morning report
+  gains incomplete-logs phrasing + no-absence-narration + one-tip allowance; label scanner
+  reads any language (incl. Indonesian), net-weight-only guard, per-can kcal conversion.
 - [x] Stale-PWA fix (owner hit it logging litter after the deploy): `lib/action-error.ts`
   translates Next's 'Server Action "<hash>" was not found' into "close and reopen the app",
   applied at all 27 toast catch sites + 2 previously-uncaught action awaits.
