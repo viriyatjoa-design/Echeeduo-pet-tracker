@@ -1,8 +1,16 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentAppUser } from "@/lib/auth";
-import { askAI, parseAIJson, isAIReady, AI_SETUP_MESSAGE } from "@/lib/ai";
+import {
+  askAI,
+  parseAIJson,
+  isAIReady,
+  AI_SETUP_MESSAGE,
+  VISION_MODEL,
+} from "@/lib/ai";
+import { listAttachments } from "@/lib/storage";
 import { getWeightLogs } from "@/lib/weight-queries";
 import { getCatFeedingHistory } from "@/lib/feeding-queries";
 import { getCareEventsByCat, getCareTypeLabels } from "@/lib/care-queries";
@@ -106,6 +114,8 @@ async function gatherCatData(catId: string) {
       urine: l.urine,
       stool: l.stool,
       consistency: l.stool_consistency_label,
+      // Stored photo observation, truncated to keep the prompt lean.
+      photo_ai: l.ai_analysis ? l.ai_analysis.slice(0, 300) : undefined,
     })),
     care_events: care.slice(0, 40).map((e) => ({
       type: careLabels.get(e.event_type_id) ?? "Care",
@@ -202,6 +212,7 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
   const raw = await askAI({
     json: true,
     maxTokens: 3000,
+    model: VISION_MODEL,
     messages: [
       {
         role: "system",
@@ -236,6 +247,100 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
       note: typeof parsed.note === "string" ? parsed.note : null,
     },
   };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
+}
+
+const LITTER_SYSTEM_PROMPT = `You look at litter-box photos inside "Purrfect Log", a family cat-care app. You describe what is VISIBLE in the photo — stool and/or urine clumps — so the family has a consistent written record.
+
+Rules:
+- You are NOT a veterinarian. Never diagnose or name diseases. If something looks off, phrase it as "worth mentioning to your vet".
+- Describe only what you can actually see. If the photo is too unclear, or doesn't show stool/urine, say exactly that in one line and stop.
+- Plain text, short "-" bullets under tiny headers. No markdown syntax. Under 120 words.`;
+
+/**
+ * Read the newest photo on a litter log and store a general stool/urine
+ * observation on the row (litter_logs.ai_analysis — migration 004). Called
+ * automatically after a photo upload and manually via the Refresh button, so
+ * it always re-reads the CURRENT newest photo.
+ */
+export async function analyzeLitterPhoto(litterLogId: string): Promise<AIResult> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) throw new Error("Unauthorized");
+    if (!isAIReady()) throw new Error(AI_SETUP_MESSAGE);
+
+    const { data: log, error } = await db()
+      .from("litter_logs")
+      .select("id, cat_id, urine, stool, stool_consistency_id, notes")
+      .eq("id", litterLogId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!log) throw new Error("Litter entry not found.");
+
+    const photos = await listAttachments("litter_log", litterLogId);
+    const photo = photos.find((p) => p.url);
+    if (!photo?.url) {
+      throw new Error("No photo on this entry — add one first.");
+    }
+
+    // Storage is private: fetch via the signed URL server-side and inline the
+    // image as a data URL (same pattern as the label scanner).
+    const imgRes = await fetch(photo.url, {
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!imgRes.ok) throw new Error("Couldn't load the photo — try again.");
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    if (buf.byteLength > 8 * 1024 * 1024) {
+      throw new Error("Photo too large to analyze.");
+    }
+    const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+    const dataUrl = `data:${contentType};base64,${buf.toString("base64")}`;
+
+    // What the family already logged, so the AI can confirm or gently disagree.
+    const logged: string[] = [];
+    if (log.urine) logged.push("urine");
+    if (log.stool) logged.push("stool");
+    if (log.notes) logged.push(`notes: "${log.notes}"`);
+
+    const text = await askAI({
+      model: VISION_MODEL,
+      maxTokens: 4000,
+      messages: [
+        { role: "system", content: LITTER_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: dataUrl } },
+            {
+              type: "text",
+              text: `The family logged this entry as: ${logged.join(", ") || "(nothing marked)"}. Analyze the photo. Format:\n\nWhat I see\n- color, consistency/texture, approximate size and amount, shape\n- anything notable: blood, mucus, unusually dark/pale color, visible parasites, very large or very small clumps\n\nReading\n- 1-2 bullets on what this generally looks like for a cat (healthy-looking / soft / dry, etc.), hedged, no diagnosis\n\nWorth mentioning to your vet\n- specific visible things a vet would want to know, or the single line "Nothing concerning visible."`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const { error: updateError } = await db()
+      .from("litter_logs")
+      .update({
+        ai_analysis: text,
+        ai_analyzed_at: new Date().toISOString(),
+      })
+      .eq("id", litterLogId);
+    if (updateError) {
+      // Most likely: migration 004 not run yet, so the columns don't exist.
+      throw new Error(
+        /ai_analysis|ai_analyzed_at|column/i.test(updateError.message)
+          ? "Analysis ran, but saving needs migration 004_litter_ai.sql — run it in the Supabase SQL Editor (see SETUP.md)."
+          : updateError.message,
+      );
+    }
+
+    revalidatePath("/", "layout");
+    return { ok: true, text };
   } catch (err) {
     return { ok: false, error: errMsg(err) };
   }

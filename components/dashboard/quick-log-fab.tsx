@@ -42,6 +42,8 @@ export type QuickLogFabProps = {
   feedData: FeedData;
   stoolConsistencies: Lookup[];
   symptomTypes: Lookup[];
+  /** AI configured → litter photos auto-analyze on save. */
+  aiReady?: boolean;
 };
 
 /** A menu row inside the FAB popover. */
@@ -79,6 +81,7 @@ export function QuickLogFab({
   feedData,
   stoolConsistencies,
   symptomTypes,
+  aiReady = false,
 }: QuickLogFabProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [feedOpen, setFeedOpen] = React.useState(false);
@@ -230,6 +233,7 @@ export function QuickLogFab({
         stoolConsistencies={stoolConsistencies}
         open={litterOpen}
         onOpenChange={setLitterOpen}
+        aiReady={aiReady}
       />
       <SymptomForm
         cats={cats}

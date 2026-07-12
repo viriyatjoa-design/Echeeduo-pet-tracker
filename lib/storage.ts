@@ -92,6 +92,25 @@ export async function listAttachments(
   );
 }
 
+/**
+ * Which of these entities have at least one active attachment — one batched
+ * query, so list pages can show/hide photo controls without a query per row.
+ */
+export async function entityIdsWithAttachments(
+  entityType: string,
+  entityIds: UUID[],
+): Promise<Set<UUID>> {
+  if (entityIds.length === 0) return new Set();
+  const { data, error } = await db()
+    .from("attachments")
+    .select("entity_id")
+    .eq("entity_type", entityType)
+    .eq("is_active", true)
+    .in("entity_id", entityIds);
+  if (error) throw new Error(error.message);
+  return new Set(((data ?? []) as { entity_id: UUID }[]).map((r) => r.entity_id));
+}
+
 /** Create a short-lived signed URL for a storage object key. */
 export async function getSignedUrl(
   path: string,

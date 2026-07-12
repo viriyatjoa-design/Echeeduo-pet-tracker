@@ -1,6 +1,8 @@
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isAIReady } from "@/lib/ai";
 import { getJournalEntries, type JournalEntry } from "@/lib/observation-queries";
+import { entityIdsWithAttachments } from "@/lib/storage";
 import { getLookupsByCategory } from "@/lib/lookups";
 import { formatDateTime } from "@/lib/time";
 import { strings } from "@/lib/strings";
@@ -13,6 +15,7 @@ import {
   type JournalRowVM,
 } from "@/components/observation/journal-list";
 import { LitterForm } from "@/components/observation/litter-form";
+import { LitterAnalysis } from "@/components/observation/litter-analysis";
 import { SymptomForm } from "@/components/observation/symptom-form";
 
 const t = {
@@ -43,10 +46,25 @@ export default async function JournalPage() {
   const cats = (catsRes.data ?? []) as Cat[];
   const catById = new Map(cats.map((c) => [c.id, c]));
 
+  // One batched query: which litter entries have a photo (drives the AI
+  // analyze / update-photo controls without a per-row lookup).
+  const aiReady = isAIReady();
+  const litterWithPhoto = await entityIdsWithAttachments(
+    "litter_log",
+    entries.filter((e) => e.kind === "litter").map((e) => e.id),
+  );
+
   const rows: JournalRowVM[] = entries.map((e) => ({
     id: `${e.kind}-${e.id}`,
     catId: e.cat_id,
-    node: <JournalRow entry={e} cat={e.cat_id ? catById.get(e.cat_id) : undefined} />,
+    node: (
+      <JournalRow
+        entry={e}
+        cat={e.cat_id ? catById.get(e.cat_id) : undefined}
+        hasPhoto={litterWithPhoto.has(e.id)}
+        aiReady={aiReady}
+      />
+    ),
   }));
 
   return (
@@ -61,7 +79,11 @@ export default async function JournalPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <LitterForm cats={cats} stoolConsistencies={stoolConsistencies} />
+        <LitterForm
+          cats={cats}
+          stoolConsistencies={stoolConsistencies}
+          aiReady={aiReady}
+        />
         <SymptomForm cats={cats} symptomTypes={symptomTypes} />
       </div>
 
@@ -74,9 +96,13 @@ export default async function JournalPage() {
 async function JournalRow({
   entry,
   cat,
+  hasPhoto,
+  aiReady,
 }: {
   entry: JournalEntry;
   cat?: Cat;
+  hasPhoto: boolean;
+  aiReady: boolean;
 }) {
   const who = cat ? cat.name : t.household;
 
@@ -115,7 +141,19 @@ async function JournalRow({
           <AttachmentGallery
             entityType={entry.kind === "litter" ? "litter_log" : "symptom_log"}
             entityId={entry.id}
-            deletable={false}
+            // Litter photos are replaceable (upload new + remove old).
+            deletable={entry.kind === "litter"}
+            revalidate="/journal"
+          />
+        )}
+
+        {entry.kind === "litter" && (
+          <LitterAnalysis
+            litterId={entry.id}
+            analysis={entry.ai_analysis}
+            analyzedAt={entry.ai_analyzed_at}
+            hasPhoto={hasPhoto}
+            aiReady={aiReady}
           />
         )}
 

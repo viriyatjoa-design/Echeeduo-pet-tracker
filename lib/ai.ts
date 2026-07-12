@@ -12,6 +12,14 @@ const BASE_URL = process.env.MOONSHOT_BASE_URL ?? "https://api.moonshot.ai/v1";
 // if the console shows a different exact model id.
 const MODEL = process.env.MOONSHOT_MODEL ?? "kimi-k2.6";
 
+/**
+ * Optional faster model for single-photo jobs (litter analysis, label scan).
+ * K2.6 is a thinking model — fine for briefs, slow for "look at one photo".
+ * Set MOONSHOT_VISION_MODEL in Vercel (e.g. "kimi-latest") to speed those up;
+ * unset, everything uses the main model.
+ */
+export const VISION_MODEL = process.env.MOONSHOT_VISION_MODEL ?? MODEL;
+
 export const AI_SETUP_MESSAGE =
   "AI isn't set up yet — add MOONSHOT_API_KEY in Vercel env vars and redeploy (see SETUP.md).";
 
@@ -30,11 +38,14 @@ export async function askAI({
   messages,
   json = false,
   maxTokens = 8000,
+  model = MODEL,
 }: {
   messages: AIMessage[];
   /** Force a JSON-object response (OpenAI-style response_format). */
   json?: boolean;
   maxTokens?: number;
+  /** Per-call model override (e.g. VISION_MODEL for photo jobs). */
+  model?: string;
 }): Promise<string> {
   const key = process.env.MOONSHOT_API_KEY;
   if (!key) throw new Error(AI_SETUP_MESSAGE);
@@ -46,7 +57,7 @@ export async function askAI({
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       messages,
       max_tokens: maxTokens,
       // No temperature: Kimi K2.6 only accepts its fixed default (sending a

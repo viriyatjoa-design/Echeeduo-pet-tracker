@@ -1,10 +1,13 @@
 # Setup — get Purrfect Log running
 
-> **Already deployed? One pending step (added overnight):** the app now includes
-> **Inventory & spending** (Milestone 2). To activate it, open Supabase → **SQL Editor**
-> → New query → paste all of `supabase/migrations/003_inventory.sql` → **Run**
-> ("Success. No rows returned"). Until then the app works exactly as before —
-> the Inventory page just shows a "not set up yet" notice.
+> **Already deployed? Pending steps:**
+> 1. **Inventory & spending** (Milestone 2): open Supabase → **SQL Editor** → New query →
+>    paste all of `supabase/migrations/003_inventory.sql` → **Run** ("Success. No rows
+>    returned"). Until then the app works exactly as before — the Inventory page just shows
+>    a "not set up yet" notice.
+> 2. **Litter photo AI analysis**: same way, run `supabase/migrations/004_litter_ai.sql`
+>    (two new columns on `litter_logs`). Until then the analysis still runs but can't be
+>    saved — the app tells you to run the migration.
 
 Roughly 20–30 minutes end to end. You need a Supabase account and a Vercel account (both
 have free tiers that are plenty for a household).
@@ -64,13 +67,29 @@ Sign in, go to **Settings → Members → Add**, enter her email + name. She can
 a magic link immediately. Deactivating a member blocks them but keeps their history.
 
 ## AI features (optional — Kimi/Moonshot)
-The AI health brief / vet summary (cat profile → Health tab) and the food label
-scanner (Catalog → food form) need two env vars in Vercel:
+The AI health brief / vet summary (cat profile → Health tab), the food label
+scanner (Catalog → food form), and the litter photo analysis (journal / Health
+tab) need env vars in Vercel:
 `MOONSHOT_API_KEY` (from platform.moonshot.ai) and `MOONSHOT_MODEL` (the model
 you picked, e.g. Kimi K2.6's ID from the console). Redeploy after adding.
 Without them the app works normally — the AI buttons just show a setup note.
-The label scanner needs a vision-capable model. The AI never sees your keys or
-account — it receives only the cat data needed for each request, server-side.
+The label scanner and litter analysis need a vision-capable model. The AI never
+sees your keys or account — it receives only the cat data needed for each
+request, server-side.
+
+**Litter photo analysis** (run migration `004_litter_ai.sql` first): when you
+log litter with a photo, the AI automatically reads it and writes a short
+stool/urine observation (color, consistency, size, anything worth mentioning
+to the vet) onto the entry. On any litter entry you can **Refresh** the
+analysis or **Update photo** (which re-analyzes). It's a description, not a
+diagnosis — the vet summary includes these observations too.
+
+**Speed (optional):** K2.6 is a "thinking" model — great for briefs, slow for
+a single photo. Add `MOONSHOT_VISION_MODEL` in Vercel with a vision-capable
+non-thinking model ID from your Moonshot console (e.g. `kimi-latest`) and
+redeploy: photo jobs (litter analysis + label scan) will use it and feel much
+snappier. Check the exact ID in the console — if the model rejects the request
+the error is shown to you directly.
 
 ## Notes
 - **Auth choice:** we use Supabase magic-link instead of the Zitadel described in `SPEC.md`

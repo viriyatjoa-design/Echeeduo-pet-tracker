@@ -140,6 +140,9 @@ export type LitterLog = {
   stool: boolean;
   stool_consistency_id: UUID | null;
   notes: string | null;
+  /** AI photo observation (migration 004); null until analyzed. */
+  ai_analysis: string | null;
+  ai_analyzed_at: string | null;
   created_by: UUID;
   is_active: boolean;
   created_at: string;

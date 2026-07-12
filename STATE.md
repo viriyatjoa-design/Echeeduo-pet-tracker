@@ -5,9 +5,11 @@ Branch: `claude/pwa-gsd-build-ze198d` · Milestone: **V1 + M2 shipped, live in p
 ## BACKLOG — open items (check here first when resuming)
 Owner-side (blocked on Rio):
 - [ ] Run `003_inventory.sql` in Supabase SQL Editor (activates inventory; app degrades gracefully until then) — status unconfirmed
+- [ ] **Run `004_litter_ai.sql` in Supabase SQL Editor** (2 columns on litter_logs; litter AI analysis can't be saved until then — the error says so)
+- [ ] Optional: set `MOONSHOT_VISION_MODEL` in Vercel (vision-capable non-thinking model, e.g. `kimi-latest` — verify ID in console) for faster photo analysis
 - [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
 - [ ] Fill cat details (sex/birth/neutered) + first weights to unlock kcal targets — status unconfirmed
-- [x] Kimi/Moonshot API key set by owner; vision capability + exact model ID still unverified (label scanner will surface any API error directly)
+- [x] Kimi/Moonshot API key set by owner; model `kimi-k2.6` confirmed working (briefs + scanner)
 
 Build-side:
 - [x] **Milestone AI SHIPPED** (Kimi/Moonshot): health brief + vet summary on cat Health tab; label scanner in food form; graceful no-key state. Owner may need to set MOONSHOT_MODEL to the exact console model ID (code defaults to "kimi-k2.6")
@@ -16,6 +18,17 @@ Build-side:
   AI actions converted to result objects (07-12); the OTHER actions (care, feeding, catalog,
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
+
+## Recent session (2026-07-12, day — litter AI)
+- [x] **Litter photo AI analysis** (owner-requested): `analyzeLitterPhoto` action reads the
+  entry's newest photo (signed URL → data URL → vision model) and stores a short stool/urine
+  observation on the row (`ai_analysis`/`ai_analyzed_at`, migration 004). Auto-runs after a
+  photo upload in the litter form (fire-and-forget, toasts on done/fail); Refresh +
+  Update-photo controls on journal + cat-health litter rows (`LitterAnalysis` component);
+  litter photos deletable now so a photo can be replaced. Health-brief data includes stored
+  observations. `MOONSHOT_VISION_MODEL` env (optional) routes photo jobs (litter + label
+  scan) to a faster non-thinking vision model. Pre-migration the app degrades with a clear
+  "run 004" message. Build green (14 routes).
 
 ## Recent session (2026-07-12, morning→day)
 - [x] "Already done?" toggle on New event — backdated care records (historical vaccinations); next occurrence chains from historical date (`logPastCareEvent`)

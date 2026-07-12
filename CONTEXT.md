@@ -20,6 +20,8 @@ cross-session memory; conversation context gets compacted, this doesn't.**
 | 07-12 | Care events removable (soft delete, trash icon on /care + timeline); Done on not-yet-due events asks confirmation | Owner hit duplicate-done chain-march; wanted delete |
 | 07-12 | Feeding gets "Now / Earlier" — backdate forgotten logs (quick feed + feed all, server rejects future) | Owner: "sometimes we forgot to log directly" |
 | 07-12 | **Milestone AI approved, provider = Kimi/Moonshot** (OpenAI-compatible, plain fetch, `MOONSHOT_API_KEY`, no new deps). Build order: label scanner (needs vision-model check on owner's account) + health brief/vet summary. NOT built yet — owner said "later" | Owner chose Kimi over Claude API |
+| 07-12 | Milestone AI built + shipped; owner confirmed working. K2.6 lessons (hard-won, 4 debug rounds): model id `kimi-k2.6`; NO temperature param (rejected); thinking model — big max_tokens or the budget dies in reasoning; AI actions return `{ok,...}` result objects because prod masks thrown Server Action errors | Debugging with owner screenshots |
+| 07-12 | **Litter photo AI analysis** (owner-requested): photo upload auto-triggers stool/urine observation, stored on `litter_logs.ai_analysis` (migration 004), Refresh + Update-photo controls on journal/health litter rows; litter photos now deletable. Optional `MOONSHOT_VISION_MODEL` (non-thinking vision model, e.g. kimi-latest) speeds up photo jobs incl. label scan | Owner: "automatic stool/urine analysis… maybe we need a faster Kimi model" |
 
 ## Owner profile
 Rio (viriyatjoa@gmail.com) + wife (sinamoroll08@gmail.com, display "Wife").

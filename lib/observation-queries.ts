@@ -32,6 +32,8 @@ export type JournalLitterEntry = {
   stool: boolean;
   stool_consistency_label: string | null;
   notes: string | null;
+  ai_analysis: string | null;
+  ai_analyzed_at: string | null;
 };
 
 export type JournalSymptomEntry = {
@@ -111,6 +113,8 @@ export async function getJournalEntries(
     stool: boolean;
     stool_consistency_id: UUID | null;
     notes: string | null;
+    ai_analysis?: string | null;
+    ai_analyzed_at?: string | null;
     created_by: UUID;
   }[]) {
     entries.push({
@@ -125,6 +129,9 @@ export async function getJournalEntries(
         ? (lookupMap.get(r.stool_consistency_id)?.label ?? null)
         : null,
       notes: r.notes,
+      // Optional-chained: absent until migration 004 is run.
+      ai_analysis: r.ai_analysis ?? null,
+      ai_analyzed_at: r.ai_analyzed_at ?? null,
     });
   }
 
@@ -222,6 +229,8 @@ export type CatLitterRow = {
   stool: boolean;
   stool_consistency_label: string | null;
   notes: string | null;
+  ai_analysis: string | null;
+  ai_analyzed_at: string | null;
 };
 
 /** One point on the water chart: a Jakarta calendar day and its total ml. */
@@ -295,6 +304,8 @@ export async function getCatHealth(catId: UUID): Promise<CatHealth> {
       stool: boolean;
       stool_consistency_id: UUID | null;
       notes: string | null;
+      ai_analysis?: string | null;
+      ai_analyzed_at?: string | null;
     }[]
   ).map((r) => ({
     id: r.id,
@@ -305,6 +316,8 @@ export async function getCatHealth(catId: UUID): Promise<CatHealth> {
       ? (lookupMap.get(r.stool_consistency_id)?.label ?? null)
       : null,
     notes: r.notes,
+    ai_analysis: r.ai_analysis ?? null,
+    ai_analyzed_at: r.ai_analyzed_at ?? null,
   }));
 
   // Build the 14 day buckets (ascending) then fill.

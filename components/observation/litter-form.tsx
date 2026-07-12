@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/components/attachments/image-compress";
 import { logLitter } from "@/lib/actions/observation";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
+import { analyzeLitterPhoto } from "@/lib/actions/ai";
 import { strings } from "@/lib/strings";
 import type { Cat, Lookup } from "@/lib/types";
 
@@ -46,6 +47,9 @@ const t = {
   photo: "Photo",
   addPhoto: "Add photo",
   saved: "Litter logged",
+  savedAnalyzing: "Litter logged — AI is reading the photo…",
+  analysisReady: "Photo analysis ready — see the journal",
+  analysisFailed: "Photo analysis failed",
   error: "Couldn't log litter",
   photoFailed: "Saved — photo upload failed, add it later from the journal",
 } as const;
@@ -58,6 +62,8 @@ export type LitterFormProps = {
   onOpenChange?: (open: boolean) => void;
   /** Render the built-in trigger button (ignored when controlled). */
   showTrigger?: boolean;
+  /** AI configured server-side → photo uploads auto-trigger stool/urine analysis. */
+  aiReady?: boolean;
 };
 
 export function LitterForm({
@@ -66,6 +72,7 @@ export function LitterForm({
   open,
   onOpenChange,
   showTrigger = true,
+  aiReady = false,
 }: LitterFormProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -122,6 +129,7 @@ export function LitterForm({
       // Photo-then-id: the row exists, now attach the (optional) photo to it.
       // The row is saved either way — an upload failure must still close the
       // dialog, or re-saving would duplicate the row.
+      let photoUploaded = false;
       if (file) {
         try {
           const compressed = await compressImage(file);
@@ -131,6 +139,7 @@ export function LitterForm({
           fd.set("revalidate", "/journal");
           fd.set("file", compressed);
           await uploadAttachmentAction(fd);
+          photoUploaded = true;
         } catch {
           toast({ title: t.photoFailed, variant: "warning" });
           setOpen(false);
@@ -139,9 +148,31 @@ export function LitterForm({
         }
       }
 
-      toast({ title: t.saved, variant: "success" });
+      const analyze = photoUploaded && aiReady;
+      toast({
+        title: analyze ? t.savedAnalyzing : t.saved,
+        variant: "success",
+      });
       setOpen(false);
       router.refresh();
+
+      // Auto-analysis (owner-requested): fire-and-forget AFTER the dialog
+      // closes so saving never waits on the model. The result lands on the
+      // row (refresh shows it); toasts report either way.
+      if (analyze) {
+        void analyzeLitterPhoto(id).then((res) => {
+          if (res.ok) {
+            toast({ title: t.analysisReady, variant: "success" });
+          } else {
+            toast({
+              title: t.analysisFailed,
+              description: res.error,
+              variant: "warning",
+            });
+          }
+          router.refresh();
+        });
+      }
     });
   }
 

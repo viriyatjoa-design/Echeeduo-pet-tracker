@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UtensilsCrossed } from "lucide-react";
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isAIReady } from "@/lib/ai";
 import { strings } from "@/lib/strings";
 import { getLookupsByCategory } from "@/lib/lookups";
 import {
@@ -190,6 +191,7 @@ export default async function TodayPage() {
         feedData={feedData}
         stoolConsistencies={stoolConsistencies}
         symptomTypes={symptomTypes}
+        aiReady={isAIReady()}
       />
     </div>
   );

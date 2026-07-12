@@ -1,4 +1,6 @@
 import { getCatHealth } from "@/lib/observation-queries";
+import { entityIdsWithAttachments } from "@/lib/storage";
+import { isAIReady } from "@/lib/ai";
 import { formatDateTime } from "@/lib/time";
 import { strings } from "@/lib/strings";
 import type { Cat } from "@/lib/types";
@@ -11,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AttachmentGallery } from "@/components/attachments/attachment-gallery";
+import { LitterAnalysis } from "@/components/observation/litter-analysis";
 import { WaterChart } from "@/components/observation/water-chart";
 import { WaterQuickAdd } from "@/components/observation/water-quick-add";
 
@@ -36,6 +39,11 @@ const t = {
 export async function HealthSection({ cat }: { cat: Cat }) {
   const health = await getCatHealth(cat.id);
   const totalWater = health.water.reduce((sum, d) => sum + d.ml, 0);
+  const aiReady = isAIReady();
+  const litterWithPhoto = await entityIdsWithAttachments(
+    "litter_log",
+    health.litter.map((l) => l.id),
+  );
 
   return (
     <div className="space-y-4">
@@ -150,7 +158,16 @@ export async function HealthSection({ cat }: { cat: Cat }) {
                   <AttachmentGallery
                     entityType="litter_log"
                     entityId={l.id}
-                    deletable={false}
+                    // Litter photos are replaceable (upload new + remove old).
+                    deletable
+                    revalidate={`/cats/${cat.id}`}
+                  />
+                  <LitterAnalysis
+                    litterId={l.id}
+                    analysis={l.ai_analysis}
+                    analyzedAt={l.ai_analyzed_at}
+                    hasPhoto={litterWithPhoto.has(l.id)}
+                    aiReady={aiReady}
                   />
                 </li>
               ))}
