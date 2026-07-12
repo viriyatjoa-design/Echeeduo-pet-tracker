@@ -37,7 +37,8 @@ export function JournalList({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      {/* One scrollable line instead of a wrapping block (space audit). */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
         <FilterChip
           active={selected === ALL}
           onClick={() => setSelected(ALL)}
@@ -86,7 +87,7 @@ function FilterChip({
       size="pill"
       variant={active ? "default" : "outline"}
       onClick={onClick}
-      className={cn(!active && "text-muted-foreground")}
+      className={cn("shrink-0", !active && "text-muted-foreground")}
     >
       {accentIndex != null && (
         <span

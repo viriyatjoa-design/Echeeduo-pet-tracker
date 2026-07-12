@@ -20,7 +20,6 @@ import { SymptomForm } from "@/components/observation/symptom-form";
 
 const t = {
   title: "Journal",
-  subtitle: "The household's litter, water, and symptom log — newest first.",
   household: "Household",
   water: "Water",
   litter: "Litter",
@@ -69,22 +68,19 @@ export default async function JournalPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {t.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t.subtitle}</p>
+      {/* Title + the two add-buttons share one row (space audit). */}
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-bold tracking-tight text-foreground">
+          {t.title}
+        </h1>
+        <div className="flex gap-2">
+          <LitterForm
+            cats={cats}
+            stoolConsistencies={stoolConsistencies}
+            aiReady={aiReady}
+          />
+          <SymptomForm cats={cats} symptomTypes={symptomTypes} />
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <LitterForm
-          cats={cats}
-          stoolConsistencies={stoolConsistencies}
-          aiReady={aiReady}
-        />
-        <SymptomForm cats={cats} symptomTypes={symptomTypes} />
       </div>
 
       <JournalList cats={cats} rows={rows} />

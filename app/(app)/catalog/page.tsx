@@ -16,7 +16,6 @@ import { TemplatesSection } from "@/components/catalog/templates-section";
 
 const t = {
   title: "Catalog",
-  subtitle: "Foods and meal templates for the whole household.",
   foods: "Foods",
   templates: "Meal templates",
   inventory: "Inventory",
@@ -71,12 +70,9 @@ export default async function CatalogPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {t.title}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-      </div>
+      <h1 className="text-xl font-bold tracking-tight text-foreground">
+        {t.title}
+      </h1>
 
       <Link
         href="/inventory"

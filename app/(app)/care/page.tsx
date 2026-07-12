@@ -18,10 +18,6 @@ import { RescheduleForm } from "@/components/care/reschedule-form";
 import { RemoveEventButton } from "@/components/care/remove-event-button";
 import { strings } from "@/lib/strings";
 
-const t = {
-  subtitle: "What's due and overdue across all cats.",
-} as const;
-
 /** HH:MM from a 'HH:MM:SS' / 'HH:MM' time string. */
 function shortTime(time: string | null): string | null {
   return time ? time.slice(0, 5) : null;
@@ -48,7 +44,7 @@ function CareRow({
   // Stacked layout: text gets the full card width (no one-letter titles on a
   // phone); actions sit on their own row with full-size tap targets.
   return (
-    <li className="space-y-2 rounded-2xl border border-border bg-card p-3">
+    <li className="space-y-1.5 rounded-2xl border border-border bg-card px-3 py-2.5">
       <div className="flex items-center gap-3">
         <CatAvatar cat={event.cat} size={40} />
         <div className="min-w-0 flex-1">
@@ -115,14 +111,9 @@ export default async function CarePage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {strings.care.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-        </div>
-      </div>
+      <h1 className="text-xl font-bold tracking-tight text-foreground">
+        {strings.care.title}
+      </h1>
 
       <div className="flex flex-wrap gap-2">
         <CareEventForm cats={cats} careTypes={careTypes} consumables={consumables} />

@@ -32,10 +32,8 @@ import { formatIdr, formatQty } from "@/components/inventory/format";
 
 const t = {
   title: "Inventory",
-  subtitle: "Stock, purchases and monthly spend.",
   stock: "Stock",
   spending: "Spending",
-  items: "Items",
   emptyStock: "No items yet. Add one to start tracking stock.",
   autoTracks: "auto-tracks",
   low: "Low",
@@ -60,12 +58,9 @@ function monthLabel(month: string): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">
-        {t.title}
-      </h1>
-      <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-    </div>
+    <h1 className="text-xl font-bold tracking-tight text-foreground">
+      {t.title}
+    </h1>
   );
 }
 
@@ -112,10 +107,7 @@ export default async function InventoryPage() {
 
         <TabsContent value="stock">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
-                {t.items}
-              </h2>
+            <div className="flex justify-end">
               <ItemForm types={types} units={units} foods={foods} />
             </div>
 

@@ -173,11 +173,15 @@ export function CatForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant={isEdit ? "outline" : "default"} size={isEdit ? "sm" : "default"}>
+          <Button
+            variant={isEdit ? "ghost" : "default"}
+            size={isEdit ? "sm" : "default"}
+            className={isEdit ? "w-9 px-0" : undefined}
+          >
             {isEdit ? (
               <>
                 <Pencil className="h-4 w-4" />
-                {strings.common.edit}
+                <span className="sr-only">{strings.common.edit}</span>
               </>
             ) : (
               <>
@@ -192,7 +196,7 @@ export function CatForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? t.editTitle : t.addTitle}</DialogTitle>
-          <DialogDescription>{t.subtitle}</DialogDescription>
+          <DialogDescription className="sr-only">{t.subtitle}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -245,7 +245,7 @@ export function FoodForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? t.editFood : t.addFood}</DialogTitle>
-          <DialogDescription>{t.newFoodDesc}</DialogDescription>
+          <DialogDescription className="sr-only">{t.newFoodDesc}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">

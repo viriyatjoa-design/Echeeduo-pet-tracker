@@ -44,7 +44,7 @@ export async function AttachmentGallery({
   return (
     <div
       className={cn(
-        "grid grid-cols-3 gap-2 sm:grid-cols-4",
+        "grid grid-cols-4 gap-1.5 sm:grid-cols-5",
         className,
       )}
     >

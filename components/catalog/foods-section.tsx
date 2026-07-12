@@ -31,8 +31,7 @@ export function FoodsSection({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">{t.heading}</h2>
+      <div className="flex justify-end">
         <FoodForm
           foodTypes={foodTypes}
           foodUnits={foodUnits}
@@ -71,37 +70,31 @@ export function FoodsSection({
                       </Badge>
                     </div>
 
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                      <span>
-                        {round1(food.kcal_per_100g)} {t.per100}
-                      </span>
-                      <span>·</span>
-                      <span>{unitInfo}</span>
-                      {food.default_serving_grams != null && (
-                        <>
-                          <span>·</span>
-                          <span>serving {food.default_serving_grams} g</span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-end gap-1 pt-1">
-                      <FoodForm
-                        foodTypes={foodTypes}
-                        foodUnits={foodUnits}
-                        food={food}
-                        aiReady={aiReady}
-                      />
-                      <ActionButton
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        action={setFoodActive.bind(null, food.id, false)}
-                        confirmText={t.confirmDeactivate}
-                        successText="Food deactivated"
-                      >
-                        {t.deactivate}
-                      </ActionButton>
+                    {/* Meta + actions share one row (space audit). */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                        {round1(food.kcal_per_100g)} {t.per100} · {unitInfo}
+                        {food.default_serving_grams != null &&
+                          ` · serving ${food.default_serving_grams} g`}
+                      </div>
+                      <div className="flex shrink-0 items-center">
+                        <FoodForm
+                          foodTypes={foodTypes}
+                          foodUnits={foodUnits}
+                          food={food}
+                          aiReady={aiReady}
+                        />
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          action={setFoodActive.bind(null, food.id, false)}
+                          confirmText={t.confirmDeactivate}
+                          successText="Food deactivated"
+                        >
+                          {t.deactivate}
+                        </ActionButton>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

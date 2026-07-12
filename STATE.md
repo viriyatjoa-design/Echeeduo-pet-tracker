@@ -22,6 +22,16 @@ Build-side:
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
 
+## Recent session (2026-07-12, day — vertical-space audit)
+- [x] **Vertical-space audit** (owner-requested with screenshots): page subtitles removed
+  app-wide; page H1s 2xl→xl (Today merges the date inline, greeting dropped); dialog
+  descriptions → sr-only (a11y kept, pixels saved); Card paddings p-5→p-4 + CardTitle
+  lg→base; main pb 9rem→8rem pt-4→3; Journal add-buttons share the title row + filter
+  chips one scrollable line; photo thumbs grid 3→4 cols; Settings: card descriptions
+  removed, Lists+Inventory merged into one two-link card, cat Edit → icon-only (fixes
+  "Ch…" truncation); catalog food cards meta+actions one row, redundant Foods/Items h2s
+  removed; care rows + cat card rhythm tightened. 44px tap targets preserved.
+
 ## Recent session (2026-07-12, day — British Blue retheme)
 - [x] **Compact kcal layout** (owner-picked "B + thin bar" over the big ring): progress arc
   around the cat's avatar (`AvatarKcalRing` in cat-card) + kcal numbers right-aligned in the

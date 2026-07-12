@@ -168,7 +168,7 @@ export function CareEventForm({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{strings.care.newEvent}</DialogTitle>
-          <DialogDescription>{t.desc}</DialogDescription>
+          <DialogDescription className="sr-only">{t.desc}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">

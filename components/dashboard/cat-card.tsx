@@ -140,7 +140,7 @@ export function CatCard({
       {/* Accent hairline at the top edge */}
       <div className="h-1 w-full bg-cat/70" />
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-3 p-4">
         {/* Header → profile. The kcal readout lives HERE (owner-picked compact
             layout): progress arc around the avatar + numbers on the right. */}
         <Link

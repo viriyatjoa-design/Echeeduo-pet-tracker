@@ -24,11 +24,9 @@ export const dynamic = "force-dynamic";
 const t = {
   title: "Settings",
   catsTitle: "Cats",
-  catsDesc: "Add, edit, or archive the cats in your household.",
   noCats: "No cats yet — add your first.",
   inactive: "Inactive",
   membersTitle: "Members",
-  membersDesc: "Anyone with an active email here can sign in.",
   signedIn: "Signed in",
   invited: "Invited",
   addMember: "Add a member",
@@ -63,18 +61,15 @@ export default async function SettingsPage() {
   const memberList = (members ?? []) as MemberRow[];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold tracking-tight text-foreground">
         {t.title}
       </h1>
 
       {/* ── Cats ─────────────────────────────────────────── */}
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
-          <div className="space-y-1">
-            <CardTitle>{t.catsTitle}</CardTitle>
-            <CardDescription>{t.catsDesc}</CardDescription>
-          </div>
+        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle>{t.catsTitle}</CardTitle>
           <CatForm />
         </CardHeader>
         <CardContent className="space-y-1">
@@ -117,7 +112,6 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t.membersTitle}</CardTitle>
-          <CardDescription>{t.membersDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">
@@ -168,16 +162,9 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Lists (lookups manager) ──────────────────────── */}
+      {/* ── Lists + Inventory (two quick links, one card) ── */}
       <Card>
-        <CardHeader>
-          <CardTitle>Lists</CardTitle>
-          <CardDescription>
-            Care types, food types, symptoms and more — add options to any
-            list, or start a new one. No code changes needed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2 p-4">
           <Link
             href="/admin/lists"
             className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-accent"
@@ -185,19 +172,6 @@ export default async function SettingsPage() {
             Manage lists
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
-        </CardContent>
-      </Card>
-
-      {/* ── Inventory ────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventory</CardTitle>
-          <CardDescription>
-            Stock, purchases and monthly spend — food bags, litter, medicine
-            and when to restock.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
           <Link
             href="/inventory"
             className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium hover:bg-accent"

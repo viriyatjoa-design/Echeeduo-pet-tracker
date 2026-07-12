@@ -29,14 +29,13 @@ import { QuickLogFab } from "@/components/dashboard/quick-log-fab";
 import type { Cat, Food, MealTemplate, MealTemplateItem } from "@/lib/types";
 
 const t = {
-  greeting: (name: string) => `Hi, ${name}`,
   emptyTitle: "No cats yet",
   emptyBody: "Add your first cat in Settings to start tracking their day.",
   goToSettings: "Open Settings",
 } as const;
 
 export default async function TodayPage() {
-  const member = await requireAppUser();
+  await requireAppUser();
   const database = db();
 
   // Everything the dashboard + its dialogs need, in one fan-out.
@@ -125,15 +124,13 @@ export default async function TodayPage() {
   };
 
   const header = (
-    <div className="flex items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {strings.today.title}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {formatDate(new Date().toISOString())} · {t.greeting(member.display_name)}
-        </p>
-      </div>
+    <div className="flex items-center justify-between gap-3">
+      <h1 className="min-w-0 truncate text-xl font-bold tracking-tight text-foreground">
+        {strings.today.title}{" "}
+        <span className="text-sm font-medium text-muted-foreground">
+          · {formatDate(new Date().toISOString())}
+        </span>
+      </h1>
       {cats.length > 0 && (
         <FeedAllDialog
           templates={templates}
