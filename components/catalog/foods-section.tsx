@@ -19,10 +19,12 @@ export function FoodsSection({
   foods,
   foodTypes,
   foodUnits,
+  aiReady = false,
 }: {
   foods: Food[];
   foodTypes: Lookup[];
   foodUnits: Lookup[];
+  aiReady?: boolean;
 }) {
   const typeLabel = new Map(foodTypes.map((l) => [l.id, l.label]));
   const unitLabel = new Map(foodUnits.map((l) => [l.id, l.label]));
@@ -31,7 +33,11 @@ export function FoodsSection({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-foreground">{t.heading}</h2>
-        <FoodForm foodTypes={foodTypes} foodUnits={foodUnits} />
+        <FoodForm
+          foodTypes={foodTypes}
+          foodUnits={foodUnits}
+          aiReady={aiReady}
+        />
       </div>
 
       {foods.length === 0 ? (
@@ -84,6 +90,7 @@ export function FoodsSection({
                         foodTypes={foodTypes}
                         foodUnits={foodUnits}
                         food={food}
+                        aiReady={aiReady}
                       />
                       <ActionButton
                         variant="ghost"

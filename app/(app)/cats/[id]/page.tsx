@@ -10,6 +10,8 @@ import { AttachmentUploader } from "@/components/attachments/attachment-uploader
 import { FeedingHistory } from "@/components/feed/feeding-history";
 import { WeightSection } from "@/components/weight/weight-section";
 import { HealthSection } from "@/components/observation/health-section";
+import { HealthBriefCard } from "@/components/ai/health-brief-card";
+import { isAIReady } from "@/lib/ai";
 import { CatCareTimeline } from "@/components/care/cat-care-timeline";
 import type { Cat } from "@/lib/types";
 
@@ -77,7 +79,14 @@ export default async function CatProfilePage({
           <WeightSection cat={cat} />
         </TabsContent>
         <TabsContent value="health">
-          <HealthSection cat={cat} />
+          <div className="space-y-5">
+            <HealthBriefCard
+              catId={id}
+              catName={cat.name}
+              aiReady={isAIReady()}
+            />
+            <HealthSection cat={cat} />
+          </div>
         </TabsContent>
         <TabsContent value="care">
           <CatCareTimeline catId={id} />

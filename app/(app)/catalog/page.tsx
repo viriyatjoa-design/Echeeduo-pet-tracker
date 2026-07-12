@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Package, ChevronRight } from "lucide-react";
 import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { isAIReady } from "@/lib/ai";
 import { getLookupsByCategory } from "@/lib/lookups";
 import type { Cat, Food, MealTemplate, MealTemplateItem } from "@/lib/types";
 import {
@@ -99,6 +100,7 @@ export default async function CatalogPage() {
             foods={foods}
             foodTypes={foodTypes}
             foodUnits={foodUnits}
+            aiReady={isAIReady()}
           />
         </TabsContent>
 

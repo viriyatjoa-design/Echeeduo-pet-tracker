@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Camera, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { createFood, updateFood, type FoodInput } from "@/lib/actions/foods";
+import { scanFoodLabel } from "@/lib/actions/ai";
+import { compressImage } from "@/components/attachments/image-compress";
 import type { Food, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
 
@@ -45,16 +47,24 @@ const t = {
   unitGrams: "Grams per unit",
   unitGramsHint: "e.g. 85 for one can",
   defaultServing: "Default serving (g)",
+  scanLabel: "Scan label",
+  scanning: "Reading label…",
+  scanEmpty: "Couldn't read the label — enter it manually.",
+  scanFound: "Found:",
+  scanPickUnit: "Pick the unit type (can/pouch/…).",
+  scanError: "Couldn't scan the label. Try again.",
 } as const;
 
 export function FoodForm({
   foodTypes,
   foodUnits,
   food,
+  aiReady = false,
 }: {
   foodTypes: Lookup[];
   foodUnits: Lookup[];
   food?: Food;
+  aiReady?: boolean;
 }) {
   const isEdit = !!food;
   const { toast } = useToast();
@@ -78,7 +88,84 @@ export function FoodForm({
   );
   const [notes, setNotes] = React.useState(food?.notes ?? "");
 
+  const [scanning, setScanning] = React.useState(false);
+  const scanInputRef = React.useRef<HTMLInputElement>(null);
+
   const hasUnit = unitId !== NO_UNIT;
+
+  async function onScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    setScanning(true);
+    try {
+      const compressed = await compressImage(picked, 1600, 0.82);
+      const fd = new FormData();
+      fd.append("file", compressed);
+      const scanned = await scanFoodLabel(fd);
+
+      if (
+        scanned.name == null &&
+        scanned.brand == null &&
+        scanned.kcal_per_100g == null &&
+        scanned.unit_grams == null
+      ) {
+        toast({
+          title: t.scanEmpty,
+          description: scanned.note ?? undefined,
+          variant: "warning",
+        });
+        return;
+      }
+
+      // Prefill only fields the user hasn't typed into (functional setters so
+      // anything typed while the scan ran is never overwritten).
+      if (scanned.name) {
+        setName((cur) => (cur.trim() === "" ? scanned.name! : cur));
+      }
+      if (scanned.brand) {
+        setBrand((cur) => (cur.trim() === "" ? scanned.brand! : cur));
+      }
+      if (scanned.kcal_per_100g != null) {
+        setKcal((cur) =>
+          cur.trim() === "" ? String(scanned.kcal_per_100g) : cur,
+        );
+      }
+      if (scanned.unit_grams != null) {
+        setUnitGrams((cur) =>
+          cur.trim() === "" ? String(scanned.unit_grams) : cur,
+        );
+      }
+
+      const parts: string[] = [];
+      if (scanned.brand) parts.push(scanned.brand);
+      if (scanned.name) parts.push(scanned.name);
+      if (scanned.kcal_per_100g != null)
+        parts.push(`${scanned.kcal_per_100g} kcal/100g`);
+      if (scanned.unit_grams != null)
+        parts.push(`${scanned.unit_grams} g per unit`);
+
+      const descriptionBits: string[] = [];
+      if (scanned.note) descriptionBits.push(scanned.note);
+      if (scanned.unit_grams != null && unitId === NO_UNIT) {
+        descriptionBits.push(t.scanPickUnit);
+      }
+
+      toast({
+        title: `${t.scanFound} ${parts.join(" · ")}`,
+        description:
+          descriptionBits.length > 0 ? descriptionBits.join(" ") : undefined,
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: err instanceof Error ? err.message : t.scanError,
+        variant: "destructive",
+      });
+    } finally {
+      setScanning(false);
+    }
+  }
 
   function reset() {
     setName(food?.name ?? "");
@@ -156,6 +243,33 @@ export function FoodForm({
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
+          {aiReady && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={scanning}
+                onClick={() => scanInputRef.current?.click()}
+              >
+                {scanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+                {scanning ? t.scanning : t.scanLabel}
+              </Button>
+              <input
+                ref={scanInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={onScanFile}
+              />
+            </>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="food-name">{t.name}</Label>
             <Input

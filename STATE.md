@@ -7,10 +7,10 @@ Owner-side (blocked on Rio):
 - [ ] Run `003_inventory.sql` in Supabase SQL Editor (activates inventory; app degrades gracefully until then) — status unconfirmed
 - [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
 - [ ] Fill cat details (sex/birth/neutered) + first weights to unlock kcal targets — status unconfirmed
-- [ ] Kimi/Moonshot: create API key + verify a vision model is available on the account (gates the label scanner)
+- [x] Kimi/Moonshot API key set by owner; vision capability + exact model ID still unverified (label scanner will surface any API error directly)
 
-Build-side (approved, not started):
-- [ ] **Milestone AI** (Kimi provider — see CONTEXT.md decision log): `lib/ai.ts` fetch helper, health brief + vet-summary export, label scanner (pending vision check), graceful "add key" state, `MOONSHOT_API_KEY` env
+Build-side:
+- [x] **Milestone AI SHIPPED** (Kimi/Moonshot): health brief + vet summary on cat Health tab; label scanner in food form; graceful no-key state. Owner may need to set MOONSHOT_MODEL to the exact console model ID (code defaults to "kimi-k2.6")
 - [ ] Milestone 3 (SPEC §11): vet document vault, bloodwork tracking — NOT authorized yet
 
 ## Recent session (2026-07-12, morning→day)
