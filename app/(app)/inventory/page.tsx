@@ -27,6 +27,7 @@ import { ItemForm, type FoodOption } from "@/components/inventory/item-form";
 import { PurchaseDialog } from "@/components/inventory/purchase-dialog";
 import { AdjustDialog } from "@/components/inventory/adjust-dialog";
 import { ActionMenu } from "@/components/inventory/action-menu";
+import { OpenOneButton } from "@/components/inventory/open-one-button";
 import { formatIdr, formatQty } from "@/components/inventory/format";
 
 const t = {
@@ -223,6 +224,12 @@ function ItemCard({
         </div>
 
         <div className="flex items-center justify-end gap-1 pt-1">
+          {/* Bulk items (litter/other, not food-linked): "Opened one" IS the
+              consumption — stock counts sealed packs (owner-approved). */}
+          {!item.food_id &&
+            (item.typeCode === "litter" || item.typeCode === "other") && (
+              <OpenOneButton itemId={item.id} quantity={item.quantity} />
+            )}
           <PurchaseDialog item={item} />
           <AdjustDialog item={item} />
           <ActionMenu

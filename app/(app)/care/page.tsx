@@ -2,12 +2,16 @@ import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getLookupsByCategory } from "@/lib/lookups";
 import { getOpenCareEvents, getCareTypeLabels } from "@/lib/care-queries";
+import { getInventoryItems } from "@/lib/inventory-queries";
 import { bucketCareEvents } from "@/lib/care";
 import { relativeDay } from "@/lib/time";
 import type { Cat } from "@/lib/types";
 import type { CareEventWithCat } from "@/lib/care-queries";
 import { CatAvatar } from "@/components/cats/cat-avatar";
-import { CareEventForm } from "@/components/care/care-event-form";
+import {
+  CareEventForm,
+  type ConsumableOption,
+} from "@/components/care/care-event-form";
 import { MedCourseForm } from "@/components/care/med-course-form";
 import { CompleteButton } from "@/components/care/complete-button";
 import { RescheduleForm } from "@/components/care/reschedule-form";
@@ -77,14 +81,21 @@ function CareRow({
 export default async function CarePage() {
   await requireAppUser();
 
-  const [events, typeLabels, careTypes, catsRes] = await Promise.all([
-    getOpenCareEvents(),
-    getCareTypeLabels(),
-    getLookupsByCategory("care_event_type"),
-    db().from("cats").select("*").eq("is_active", true).order("name"),
-  ]);
+  const [events, typeLabels, careTypes, catsRes, inventoryItems] =
+    await Promise.all([
+      getOpenCareEvents(),
+      getCareTypeLabels(),
+      getLookupsByCategory("care_event_type"),
+      db().from("cats").select("*").eq("is_active", true).order("name"),
+      getInventoryItems(), // [] when migration 003 hasn't been run
+    ]);
 
   const cats = (catsRes.data ?? []) as Cat[];
+  // Food-linked items already auto-consume via feeding — offering them here
+  // would double-count, so only non-food items are linkable to care.
+  const consumables: ConsumableOption[] = inventoryItems
+    .filter((i) => !i.food_id)
+    .map((i) => ({ id: i.id, name: i.name, unitCode: i.unitCode }));
   const { overdue, today, upcoming, anytime } = bucketCareEvents(events);
 
   // Group the (already date-sorted) upcoming events by due_date.
@@ -114,8 +125,8 @@ export default async function CarePage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <CareEventForm cats={cats} careTypes={careTypes} />
-        <MedCourseForm cats={cats} />
+        <CareEventForm cats={cats} careTypes={careTypes} consumables={consumables} />
+        <MedCourseForm cats={cats} consumables={consumables} />
       </div>
 
       {nothingOpen && (

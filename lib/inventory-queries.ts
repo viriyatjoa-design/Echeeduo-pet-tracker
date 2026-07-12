@@ -45,12 +45,12 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Resolve a stock_reason lookup id by code — never hardcode uuids. */
-async function stockReasonId(code: string): Promise<string | null> {
+/** Resolve stock_reason lookup ids by code — never hardcode uuids. */
+async function stockReasonIds(codes: string[]): Promise<string[]> {
   const all = await getAllLookups();
-  return (
-    all.find((l) => l.category === "stock_reason" && l.code === code)?.id ?? null
-  );
+  return all
+    .filter((l) => l.category === "stock_reason" && codes.includes(l.code))
+    .map((l) => l.id);
 }
 
 // ── Readiness probe ──────────────────────────────────────────────────────────
@@ -68,6 +68,7 @@ export const isInventoryReady = cache(async (): Promise<boolean> => {
 
 export type InventoryItemView = InventoryItem & {
   typeLabel: string;
+  typeCode: string;
   unitLabel: string;
   unitCode: string;
   foodName: string | null;
@@ -108,14 +109,16 @@ export const getInventoryItems = cache(
     const windowStart = jakartaStartOfDayUtc(
       addDaysToDate(today, -(TRAILING_DAYS - 1)),
     );
-    const consumptionId = await stockReasonId("consumption");
+    // 'opened' (migration 006) counts too: opening a bag of litter IS its
+    // consumption event, so bag-items get days-left from opening cadence.
+    const usageReasonIds = await stockReasonIds(["consumption", "opened"]);
     const foodIds = Array.from(
       new Set(items.map((i) => i.food_id).filter((id): id is string => !!id)),
     );
 
     const [lookupMap, consumption, foods] = await Promise.all([
       getLookupMap(),
-      fetchConsumptionRows(consumptionId, windowStart),
+      fetchConsumptionRows(usageReasonIds, windowStart),
       fetchFoodNames(foodIds),
     ]);
 
@@ -153,6 +156,7 @@ export const getInventoryItems = cache(
       return {
         ...item,
         typeLabel: type?.label ?? "—",
+        typeCode: type?.code ?? "",
         unitLabel: unit?.label ?? "—",
         unitCode: unit?.code ?? "",
         foodName: item.food_id ? (foods.get(item.food_id) ?? null) : null,
@@ -166,14 +170,14 @@ export const getInventoryItems = cache(
 );
 
 async function fetchConsumptionRows(
-  consumptionId: string | null,
+  reasonIds: string[],
   windowStart: string,
 ): Promise<{ item_id: string; delta: number }[]> {
-  if (!consumptionId) return []; // lookups not seeded → no ledger yet
+  if (reasonIds.length === 0) return []; // lookups not seeded → no ledger yet
   const { data, error } = await db()
     .from("stock_movements")
     .select("item_id, delta")
-    .eq("reason_id", consumptionId)
+    .in("reason_id", reasonIds)
     .eq("is_active", true)
     .lt("delta", 0)
     .gte("moved_at", windowStart);
@@ -216,7 +220,7 @@ export const getMonthlySpend = cache(async (): Promise<MonthlySpend> => {
   const month = todayInTz().slice(0, 7);
   const empty: MonthlySpend = { month, total: 0, byType: [] };
 
-  const purchaseId = await stockReasonId("purchase");
+  const [purchaseId] = await stockReasonIds(["purchase"]);
   if (!purchaseId) return empty; // migration 003 seeds this lookup
 
   const monthStart = `${month}-01`;

@@ -7,6 +7,7 @@ Owner-side (blocked on Rio):
 - [ ] Run `003_inventory.sql` in Supabase SQL Editor (activates inventory; app degrades gracefully until then) — status unconfirmed
 - [ ] **Run `004_litter_ai.sql` in Supabase SQL Editor** (2 columns on litter_logs; litter AI analysis can't be saved until then — the error says so)
 - [ ] **Run `005_ai_briefs.sql` in Supabase SQL Editor** (ai_briefs table; morning report + saved analyses need it)
+- [ ] **Run `006_care_consume.sql` in Supabase SQL Editor** (AFTER 003 — care↔inventory consume link, 'opened' reason, tube/bag/pack units)
 - [ ] **Set `CRON_SECRET` in Vercel** (any long random string) + redeploy — the nightly morning report is rejected until then (manual Refresh works once 005 is run)
 - [ ] Optional: set `MOONSHOT_VISION_MODEL` in Vercel (vision-capable non-thinking model, e.g. `kimi-latest` — verify ID in console) for faster photo analysis + morning report
 - [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
@@ -20,6 +21,21 @@ Build-side:
   AI actions converted to result objects (07-12); the OTHER actions (care, feeding, catalog,
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
+
+## Recent session (2026-07-12, day — consumables)
+- [x] **Consumables ride existing activities** (owner-approved after brainstorm; migration 006):
+  care events carry `consume_item_id`/`consume_qty` — the ✓ consumes stock (best-effort,
+  never blocks care; clamps cached qty at 0; ledger ref = care_event). Chain + med-course
+  doses carry the link; "Already done?" historical records DON'T consume (stock predates
+  tracking). Dose steps 0.5 (dewormer half-pill). Forms: "Uses from inventory" select +
+  amount (care event + med course; food-linked items excluded — feeding already consumes).
+- [x] **Opened-a-pack** (Option A): stock = sealed packs; `openOnePack` action (−1, reason
+  'opened') + "Opened one" button on litter/other non-food items; 'opened' now counts as
+  usage so days-left/low derive from opening cadence. Units seeded: tube/bag/pack.
+- [x] **Restock warnings** (`lib/restock.ts`): care shortfall within 30 d (needed vs on
+  hand, e.g. "short 1 tube for Flea treatment"), low stock, expiring — dashboard
+  "Restock soon" banner (amber, → /inventory) + fed into the morning report's Heads up.
+  All graceful pre-003/006.
 
 ## Recent session (2026-07-12, day — morning report)
 - [x] Owner trio: (1) photo pickers offer camera OR gallery (`capture="environment"`

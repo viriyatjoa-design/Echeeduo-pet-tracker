@@ -23,6 +23,9 @@ import {
 // Slice-local copy (BUILD_BRIEF: don't edit lib/strings.ts).
 const t = {
   notSetUp: "Inventory isn't set up yet — run migration 003 (see SETUP.md).",
+  needs006: "Run migration 006_care_consume.sql first (see SETUP.md).",
+  noneSealed: "No packs left in stock — log a purchase first.",
+  openedNote: "Opened a pack",
   unauthorized: "Unauthorized",
   nameRequired: "Please give the item a name.",
   typeRequired: "Please pick an item type.",
@@ -89,13 +92,16 @@ async function requireMe() {
 
 /** Resolve a stock_reason lookup id by code — never hardcode uuids. */
 async function stockReasonId(
-  code: "purchase" | "adjustment" | "expired",
+  code: "purchase" | "adjustment" | "expired" | "opened",
 ): Promise<string> {
   const all = await getAllLookups();
   const row = all.find(
     (l) => l.category === "stock_reason" && l.code === code,
   );
-  if (!row) throw new Error(t.notSetUp); // seeded by migration 003
+  if (!row) {
+    // 'opened' is seeded by 006; the rest by 003.
+    throw new Error(code === "opened" ? t.needs006 : t.notSetUp);
+  }
   return row.id;
 }
 
@@ -389,6 +395,57 @@ export async function adjustStock(input: {
   }
 
   revalidate();
+}
+
+/**
+ * "Opened a pack" (owner-approved Option A): stock counts UNOPENED packs;
+ * opening one is the consumption event (−1, reason 'opened'). Days-left then
+ * derives from opening cadence — no per-scoop/per-pad logging ever.
+ */
+export async function openOnePack(itemId: string): Promise<void> {
+  const me = await requireMe();
+  if (!itemId) throw new Error(t.itemNotFound);
+
+  const database = db();
+  const { data: item, error: itemErr } = await database
+    .from("inventory_items")
+    .select("id, quantity")
+    .eq("id", itemId)
+    .maybeSingle();
+  if (itemErr) fail(itemErr);
+  if (!item) throw new Error(t.itemNotFound);
+
+  const qty = Number(item.quantity);
+  if (qty < 1) throw new Error(t.noneSealed);
+
+  // Ledger first, cache second (see module comment).
+  const { data: movement, error: moveErr } = await database
+    .from("stock_movements")
+    .insert({
+      item_id: item.id,
+      delta: -1,
+      reason_id: await stockReasonId("opened"),
+      notes: t.openedNote,
+      created_by: me.id,
+    })
+    .select("id")
+    .single();
+  if (moveErr || !movement) fail(moveErr);
+
+  const { error: updErr } = await database
+    .from("inventory_items")
+    .update({ quantity: round1(qty - 1) })
+    .eq("id", item.id);
+  if (updErr) {
+    await database
+      .from("stock_movements")
+      .update({ is_active: false })
+      .eq("id", movement.id);
+    fail(updErr);
+  }
+
+  revalidate();
+  revalidatePath("/"); // restock banner on the dashboard
 }
 
 /**

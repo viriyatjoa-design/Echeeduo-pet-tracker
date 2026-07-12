@@ -5,6 +5,7 @@ import { getLookupMap } from "@/lib/lookups";
 import { getCareTypeLabels } from "@/lib/care-queries";
 import { dailyTarget } from "@/lib/kcal";
 import { gramsToKg } from "@/lib/weight";
+import { getRestockWarnings } from "@/lib/restock";
 import { todayInTz, addDaysToDate, APP_TZ } from "@/lib/time";
 import type { AIBrief, Cat, UUID, WeightLog } from "@/lib/types";
 
@@ -80,7 +81,7 @@ Rules:
 - You are not a veterinarian; no definitive diagnoses. A single practical tip tied to the data is welcome (e.g. "hard stool again — worth offering more water today"); anything alarming (blood, no food logged at all, severity-3 symptoms) → "worth a vet call".
 - Logs may be incomplete — the family sometimes forgets. Phrase low intake as "only X kcal logged", never as fact the cat wasn't fed.
 - Be concrete: cite the actual numbers. Don't narrate absences ("no symptoms, no weight") — mention what happened; only flag an absence when it matters.
-- One tiny section per cat (the cat's name as the header line), 1-3 "-" bullets each: eating vs target, litter/symptoms if any, weight if logged. If a cat truly has nothing logged, one short bullet. Then, only if needed, a final "Heads up" section: care due soon, overdue items, a pattern across cats, or one tip.
+- One tiny section per cat (the cat's name as the header line), 1-3 "-" bullets each: eating vs target, litter/symptoms if any, weight if logged. If a cat truly has nothing logged, one short bullet. Then, only if needed, a final "Heads up" section: care due soon, overdue items, supplies to restock (restock_warnings), a pattern across cats, or one tip.
 - Plain text, no markdown syntax. Metric units. Under 160 words total — it's a glance, not an essay.`;
 
 export type MorningReportResult =
@@ -246,6 +247,11 @@ export async function generateMorningReport(
       };
     });
 
+    // Supplies running low / short for upcoming care → Heads up material.
+    const restock = await getRestockWarnings().catch(
+      () => [] as { text: string }[],
+    );
+
     const data = {
       date: today,
       cats: perCat,
@@ -257,6 +263,7 @@ export async function generateMorningReport(
           consistency: label(l.stool_consistency_id),
           photo_ai: l.ai_analysis ? l.ai_analysis.slice(0, 200) : undefined,
         })),
+      restock_warnings: restock.map((w) => w.text),
     };
 
     // Fast model: this is a small daily window — thinking-grade reasoning is

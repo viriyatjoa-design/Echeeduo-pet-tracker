@@ -30,10 +30,16 @@ import type { Cat, Lookup } from "@/lib/types";
 import { strings } from "@/lib/strings";
 import { actionErrorMessage } from "@/lib/action-error";
 
+const NO_ITEM = "__none__";
+
 const t = {
   desc: "Schedule a one-off or recurring care event for a cat.",
   cat: "Cat",
   catPh: "Pick a cat",
+  usesItem: "Uses from inventory",
+  usesItemPh: "Nothing — no stock used",
+  usesQty: "Amount per time",
+  usesQtyHint: "e.g. 1 tube, 0.5 pill",
   type: "Type",
   typePh: "Pick a care type",
   title: "Title",
@@ -54,12 +60,17 @@ const t = {
   savedPastNext: (d: string) => `Recorded — next one due ${d}`,
 } as const;
 
+/** Inventory items offered in the "uses from inventory" select. */
+export type ConsumableOption = { id: string; name: string; unitCode: string };
+
 export function CareEventForm({
   cats,
   careTypes,
+  consumables = [],
 }: {
   cats: Cat[];
   careTypes: Lookup[];
+  consumables?: ConsumableOption[];
 }) {
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
@@ -75,6 +86,8 @@ export function CareEventForm({
   const [notes, setNotes] = React.useState("");
   const [alreadyDone, setAlreadyDone] = React.useState(false);
   const [doneDate, setDoneDate] = React.useState("");
+  const [consumeItemId, setConsumeItemId] = React.useState(NO_ITEM);
+  const [consumeQty, setConsumeQty] = React.useState("1");
 
   function reset() {
     setCatId("");
@@ -87,6 +100,8 @@ export function CareEventForm({
     setNotes("");
     setAlreadyDone(false);
     setDoneDate("");
+    setConsumeItemId(NO_ITEM);
+    setConsumeQty("1");
   }
 
   function onOpenChange(next: boolean) {
@@ -98,6 +113,10 @@ export function CareEventForm({
     e.preventDefault();
     startTransition(async () => {
       try {
+        const consume =
+          consumeItemId !== NO_ITEM
+            ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
+            : {};
         if (alreadyDone) {
           const { nextDueDate } = await logPastCareEvent({
             cat_id: catId,
@@ -107,6 +126,7 @@ export function CareEventForm({
             interval_days: interval || null,
             vet_name: vet || null,
             notes: notes || null,
+            ...consume,
           });
           toast({
             title: nextDueDate
@@ -124,6 +144,7 @@ export function CareEventForm({
             interval_days: interval || null,
             vet_name: vet || null,
             notes: notes || null,
+            ...consume,
           });
           toast({ title: t.saved, variant: "success" });
         }
@@ -273,6 +294,58 @@ export function CareEventForm({
               placeholder={alreadyDone ? t.pastIntervalHint : t.intervalHint}
             />
           </div>
+
+          {consumables.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>
+                  {t.usesItem}{" "}
+                  <span className="text-muted-foreground">
+                    ({strings.common.optional})
+                  </span>
+                </Label>
+                <Select value={consumeItemId} onValueChange={setConsumeItemId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_ITEM}>{t.usesItemPh}</SelectItem>
+                    {consumables.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="care-consume-qty">
+                  {t.usesQty}
+                  {consumeItemId !== NO_ITEM && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      (
+                      {consumables.find((c) => c.id === consumeItemId)
+                        ?.unitCode ?? ""}
+                      )
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  id="care-consume-qty"
+                  type="number"
+                  inputMode="decimal"
+                  min="0.5"
+                  step="0.5"
+                  value={consumeQty}
+                  onChange={(e) => setConsumeQty(e.target.value)}
+                  placeholder={t.usesQtyHint}
+                  disabled={consumeItemId === NO_ITEM}
+                  required={consumeItemId !== NO_ITEM}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="care-vet">

@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { getCurrentAppUser } from "@/lib/auth";
-import { getLookupsByCategory } from "@/lib/lookups";
+import { getLookupsByCategory, getAllLookups } from "@/lib/lookups";
 import { nextDueDate, expandMedCourse } from "@/lib/care";
 import { todayInTz } from "@/lib/time";
 import { revalidatePath } from "next/cache";
@@ -32,6 +32,74 @@ function revalidate() {
   revalidatePath("/", "layout");
 }
 
+/**
+ * Consume qty per dose: 0.5-steps ≥ 0.5 (owner: dewormer is 1 pill or half a
+ * pill; flea is 1 tube). Returns null when no item is linked.
+ */
+function consumeQtyOrNull(
+  itemId: string | null | undefined,
+  qty: number | string | null | undefined,
+): { itemId: string; qty: number } | null {
+  const id = clean(itemId);
+  if (!id) return null;
+  const n = Math.round(Number(qty) * 2) / 2;
+  if (!Number.isFinite(n) || n < 0.5) {
+    throw new Error("Amount used must be at least 0.5.");
+  }
+  return { itemId: id, qty: n };
+}
+
+/**
+ * Best-effort inventory consumption for a completed care event (migration 006).
+ * Bookkeeping must NEVER block care: any failure here (item gone, inventory
+ * not migrated, lookup missing) is swallowed — stock can be fixed via Adjust.
+ */
+async function consumeForCareEvent(
+  eventId: string,
+  itemId: string,
+  qty: number,
+  byUserId: string,
+): Promise<void> {
+  try {
+    const database = db();
+    const all = await getAllLookups();
+    const reason = all.find(
+      (l) => l.category === "stock_reason" && l.code === "consumption",
+    );
+    if (!reason) return;
+
+    const { data: item } = await database
+      .from("inventory_items")
+      .select("id, quantity")
+      .eq("id", itemId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (!item) return;
+
+    const { error: moveErr } = await database.from("stock_movements").insert({
+      item_id: itemId,
+      delta: -qty,
+      reason_id: reason.id,
+      ref_entity_type: "care_event",
+      ref_entity_id: eventId,
+      created_by: byUserId,
+    });
+    if (moveErr) return;
+
+    // Cached quantity clamps at 0 — the ledger keeps the true delta.
+    const newQty = Math.max(
+      0,
+      Math.round((Number(item.quantity) - qty) * 10) / 10,
+    );
+    await database
+      .from("inventory_items")
+      .update({ quantity: newQty })
+      .eq("id", itemId);
+  } catch {
+    // Best-effort by design.
+  }
+}
+
 export type CreateCareEventInput = {
   cat_id: string;
   event_type_id: string;
@@ -41,6 +109,8 @@ export type CreateCareEventInput = {
   interval_days?: number | string | null;
   vet_name?: string | null;
   notes?: string | null;
+  consume_item_id?: string | null;
+  consume_qty?: number | string | null;
 };
 
 export async function createCareEvent(input: CreateCareEventInput) {
@@ -52,7 +122,9 @@ export async function createCareEvent(input: CreateCareEventInput) {
   const title = clean(input.title);
   if (!title) throw new Error("Title is required.");
 
-  const row = {
+  const consume = consumeQtyOrNull(input.consume_item_id, input.consume_qty);
+
+  const row: Record<string, unknown> = {
     cat_id: input.cat_id,
     event_type_id: input.event_type_id,
     title,
@@ -63,9 +135,23 @@ export async function createCareEvent(input: CreateCareEventInput) {
     notes: clean(input.notes),
     created_by: me.id,
   };
+  // Only send the 006 columns when actually linking — pre-migration, sending
+  // them (even as null) would make PostgREST reject EVERY create.
+  if (consume) {
+    row.consume_item_id = consume.itemId;
+    row.consume_qty = consume.qty;
+  }
 
   const { error } = await db().from("care_events").insert(row);
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Migration 006 adds the consume columns — degrade to an unlinked event.
+    if (consume && /consume_item_id|consume_qty|column/i.test(error.message)) {
+      throw new Error(
+        "Inventory link needs migration 006_care_consume.sql — run it in the Supabase SQL Editor, or save without the inventory link.",
+      );
+    }
+    throw new Error(error.message);
+  }
 
   revalidate();
 }
@@ -98,6 +184,8 @@ export type LogPastCareEventInput = {
   interval_days?: number | string | null;
   vet_name?: string | null;
   notes?: string | null;
+  consume_item_id?: string | null;
+  consume_qty?: number | string | null;
 };
 
 /**
@@ -124,11 +212,14 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
 
   const interval = posIntOrNull(input.interval_days);
   const vetName = clean(input.vet_name);
+  const consume = consumeQtyOrNull(input.consume_item_id, input.consume_qty);
   const database = db();
 
   // Completed historical record. done_at is stored at noon Jakarta on the done
   // date so it renders as that day regardless of timezone conversion.
-  const { error } = await database.from("care_events").insert({
+  // NOTE: no stock is consumed for the historical record — that stock was used
+  // before tracking started; the link only matters for FUTURE completions.
+  const pastRow: Record<string, unknown> = {
     cat_id: input.cat_id,
     event_type_id: input.event_type_id,
     title,
@@ -138,7 +229,12 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
     vet_name: vetName,
     notes: clean(input.notes),
     created_by: me.id,
-  });
+  };
+  if (consume) {
+    pastRow.consume_item_id = consume.itemId;
+    pastRow.consume_qty = consume.qty;
+  }
+  const { error } = await database.from("care_events").insert(pastRow);
   if (error) throw new Error(error.message);
 
   // Chain the next occurrence from the HISTORICAL date. May land in the past —
@@ -146,7 +242,7 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
   let next: string | null = null;
   if (interval != null) {
     next = nextDueDate(doneDate, interval);
-    const { error: insErr } = await database.from("care_events").insert({
+    const nextRow: Record<string, unknown> = {
       cat_id: input.cat_id,
       event_type_id: input.event_type_id,
       title,
@@ -154,7 +250,12 @@ export async function logPastCareEvent(input: LogPastCareEventInput) {
       interval_days: interval,
       vet_name: vetName,
       created_by: me.id,
-    });
+    };
+    if (consume) {
+      nextRow.consume_item_id = consume.itemId;
+      nextRow.consume_qty = consume.qty;
+    }
+    const { error: insErr } = await database.from("care_events").insert(nextRow);
     if (insErr) throw new Error(insErr.message);
   }
 
@@ -198,10 +299,16 @@ export async function completeCareEvent(
     return { nextDueDate: null };
   }
 
+  // Inventory hook (migration 006): the ✓ IS the consumption event — flea tube,
+  // dewormer pill, etc. Best-effort; never blocks completing care.
+  if (e.consume_item_id && e.consume_qty) {
+    await consumeForCareEvent(e.id, e.consume_item_id, Number(e.consume_qty), me.id);
+  }
+
   let next: string | null = null;
   if (e.interval_days != null) {
     next = nextDueDate(todayInTz(), e.interval_days);
-    const { error: insErr } = await database.from("care_events").insert({
+    const nextRow: Record<string, unknown> = {
       cat_id: e.cat_id,
       event_type_id: e.event_type_id,
       title: e.title,
@@ -209,7 +316,14 @@ export async function completeCareEvent(
       interval_days: e.interval_days,
       vet_name: e.vet_name,
       created_by: me.id,
-    });
+    };
+    // The chain carries the inventory link so next month consumes too.
+    // (undefined = column doesn't exist yet, pre-006 — don't send it.)
+    if (e.consume_item_id) {
+      nextRow.consume_item_id = e.consume_item_id;
+      nextRow.consume_qty = e.consume_qty ?? null;
+    }
+    const { error: insErr } = await database.from("care_events").insert(nextRow);
     if (insErr) throw new Error(insErr.message);
   }
 
@@ -244,6 +358,9 @@ export type CreateMedCourseInput = {
   start_date: string;
   duration_days: number | string;
   times: string[]; // ['08:00','20:00']
+  consume_item_id?: string | null;
+  /** Amount used per dose (e.g. 0.5 pill). */
+  consume_qty?: number | string | null;
 };
 
 /**
@@ -271,18 +388,35 @@ export async function createMedCourse(input: CreateMedCourseInput) {
   const medType = careTypes.find((l) => l.code === "medicine");
   if (!medType) throw new Error("The 'medicine' care type is missing from lookups.");
 
-  const rows = expandMedCourse(start, duration, times).map((dose) => ({
-    cat_id: input.cat_id,
-    event_type_id: medType.id,
-    title: name,
-    due_date: dose.due_date,
-    due_time: dose.due_time,
-    interval_days: null,
-    created_by: me.id,
-  }));
+  const consume = consumeQtyOrNull(input.consume_item_id, input.consume_qty);
+
+  const rows = expandMedCourse(start, duration, times).map((dose) => {
+    const row: Record<string, unknown> = {
+      cat_id: input.cat_id,
+      event_type_id: medType.id,
+      title: name,
+      due_date: dose.due_date,
+      due_time: dose.due_time,
+      interval_days: null,
+      created_by: me.id,
+    };
+    // Each dose consumes on its own ✓ (pre-006: don't send the columns).
+    if (consume) {
+      row.consume_item_id = consume.itemId;
+      row.consume_qty = consume.qty;
+    }
+    return row;
+  });
 
   const { error } = await db().from("care_events").insert(rows);
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (consume && /consume_item_id|consume_qty|column/i.test(error.message)) {
+      throw new Error(
+        "Inventory link needs migration 006_care_consume.sql — run it in the Supabase SQL Editor, or save without the inventory link.",
+      );
+    }
+    throw new Error(error.message);
+  }
 
   revalidate();
 }

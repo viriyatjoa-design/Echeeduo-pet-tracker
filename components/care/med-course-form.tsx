@@ -23,14 +23,21 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { createMedCourse } from "@/lib/actions/care";
+import type { ConsumableOption } from "@/components/care/care-event-form";
 import type { Cat } from "@/lib/types";
 import { strings } from "@/lib/strings";
 import { actionErrorMessage } from "@/lib/action-error";
+
+const NO_ITEM = "__none__";
 
 const t = {
   desc: "Generates one tickable dose for every day × time across the course.",
   cat: "Cat",
   catPh: "Pick a cat",
+  usesItem: "Uses from inventory",
+  usesItemPh: "Nothing — no stock used",
+  usesQty: "Amount per dose",
+  usesQtyHint: "e.g. 0.5 pill",
   medicine: "Medicine",
   medicinePh: "e.g. Amoxicillin 50mg",
   startDate: "Start date",
@@ -48,7 +55,13 @@ function defaultTimesFor(count: number): string[] {
   return Array.from({ length: count }, (_, i) => DEFAULT_TIMES[i] ?? "12:00");
 }
 
-export function MedCourseForm({ cats }: { cats: Cat[] }) {
+export function MedCourseForm({
+  cats,
+  consumables = [],
+}: {
+  cats: Cat[];
+  consumables?: ConsumableOption[];
+}) {
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
@@ -58,6 +71,8 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
   const [startDate, setStartDate] = React.useState("");
   const [duration, setDuration] = React.useState("7");
   const [times, setTimes] = React.useState<string[]>(["08:00", "20:00"]);
+  const [consumeItemId, setConsumeItemId] = React.useState(NO_ITEM);
+  const [consumeQty, setConsumeQty] = React.useState("1");
 
   function reset() {
     setCatId("");
@@ -65,6 +80,8 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
     setStartDate("");
     setDuration("7");
     setTimes(["08:00", "20:00"]);
+    setConsumeItemId(NO_ITEM);
+    setConsumeQty("1");
   }
 
   function onOpenChange(next: boolean) {
@@ -99,6 +116,9 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
           start_date: startDate,
           duration_days: duration,
           times,
+          ...(consumeItemId !== NO_ITEM
+            ? { consume_item_id: consumeItemId, consume_qty: consumeQty }
+            : {}),
         });
         toast({ title: t.saved, variant: "success" });
         setOpen(false);
@@ -209,6 +229,58 @@ export function MedCourseForm({ cats }: { cats: Cat[] }) {
               ))}
             </div>
           </div>
+
+          {consumables.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>
+                  {t.usesItem}{" "}
+                  <span className="text-muted-foreground">
+                    ({strings.common.optional})
+                  </span>
+                </Label>
+                <Select value={consumeItemId} onValueChange={setConsumeItemId}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_ITEM}>{t.usesItemPh}</SelectItem>
+                    {consumables.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="med-consume-qty">
+                  {t.usesQty}
+                  {consumeItemId !== NO_ITEM && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      (
+                      {consumables.find((c) => c.id === consumeItemId)
+                        ?.unitCode ?? ""}
+                      )
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  id="med-consume-qty"
+                  type="number"
+                  inputMode="decimal"
+                  min="0.5"
+                  step="0.5"
+                  value={consumeQty}
+                  onChange={(e) => setConsumeQty(e.target.value)}
+                  placeholder={t.usesQtyHint}
+                  disabled={consumeItemId === NO_ITEM}
+                  required={consumeItemId !== NO_ITEM}
+                />
+              </div>
+            </div>
+          )}
 
           {dosesTotal > 0 && (
             <p className="text-sm text-muted-foreground">{t.doses(dosesTotal)}</p>

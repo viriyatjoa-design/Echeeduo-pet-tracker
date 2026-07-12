@@ -97,6 +97,9 @@ export type CareEvent = {
   interval_days: number | null;
   vet_name: string | null;
   notes: string | null;
+  /** Inventory link (migration 006): completing this event consumes the item. */
+  consume_item_id?: UUID | null;
+  consume_qty?: number | null;
   created_by: UUID;
   is_active: boolean;
   created_at: string;

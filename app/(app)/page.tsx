@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { FeedAllDialog } from "@/components/feed/feed-all-dialog";
 import { CatCard } from "@/components/dashboard/cat-card";
 import { MorningReportCard } from "@/components/ai/morning-report-card";
+import { RestockBanner } from "@/components/dashboard/restock-banner";
 import { QuickLogFab } from "@/components/dashboard/quick-log-fab";
 import type { Cat, Food, MealTemplate, MealTemplateItem } from "@/lib/types";
 
@@ -175,6 +176,8 @@ export default async function TodayPage() {
       {header}
 
       {aiReady && <MorningReportCard brief={morningBrief} />}
+
+      <RestockBanner />
 
       <div className="space-y-4">
         {cats.map((cat) => {

@@ -11,6 +11,11 @@
 > 3. **Morning report + saved analyses**: same way, run `supabase/migrations/005_ai_briefs.sql`
 >    (one new table), and add a `CRON_SECRET` env var in Vercel (any long random string,
 >    30+ characters) so the nightly report can run — see the AI section below.
+> 4. **Care consumables + restock warnings**: run `supabase/migrations/006_care_consume.sql`
+>    (AFTER 003 — it references the inventory tables). Adds: care events can consume
+>    inventory when ticked done (flea tube, dewormer pill/half-pill), an "Opened one"
+>    button on litter-type items (stock counts sealed bags/packs), Tubes/Bags/Packs units,
+>    and a "Restock soon" banner on the dashboard when you're short for upcoming care.
 
 Roughly 20–30 minutes end to end. You need a Supabase account and a Vercel account (both
 have free tiers that are plenty for a household).
