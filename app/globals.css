@@ -58,7 +58,7 @@
        1 Enoki chocolate · 2 Cheeto red · 3 Tudou cream. */
     --cat-1: 22 39% 36%;   /* chocolate */
     --cat-2: 20 61% 44%;   /* red (ginger) */
-    --cat-3: 40 48% 42%;   /* cream (deepened for contrast as a fill) */
+    --cat-3: 38 55% 37%;   /* cream — deepened caramel so white text passes AA on the fill */
     --cat-4: 150 35% 38%;  /* sage — spare */
     --cat-5: 340 45% 52%;  /* rose — spare */
   }

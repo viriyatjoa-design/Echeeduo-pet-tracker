@@ -213,7 +213,10 @@ export function CatCard({
             initialCatId={cat.id}
             trigger={
               <Button
-                className="h-11 flex-1 bg-cat text-white hover:bg-cat/90"
+                // Accents flip lightness by theme (dark in light mode, light
+                // in dark mode), so the button's text must flip too, or white
+                // washes out on the lightened dark-mode accents.
+                className="h-11 flex-1 bg-cat text-white hover:bg-cat/90 dark:text-background"
                 aria-label={`${t.feed} ${cat.name}`}
               >
                 <Utensils aria-hidden />
