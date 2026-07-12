@@ -2,95 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Warm, domestic token layer — light + dark from one place (SPEC §7). */
+/*
+ * "British Blue" token layer (owner-approved direction, 07-12): British
+ * Shorthair coat blue as the brand, milk-paper light mode, ink-blue (never
+ * black) dark mode, and copper — their eye color — in tiny doses only.
+ * Personality: soft wellness surfaces (B) with quiet-tools restraint (A).
+ * Light + dark from this one place (SPEC §7).
+ */
 @layer base {
   :root {
-    --background: 40 33% 97%;
-    --foreground: 26 24% 16%;
+    /* Milk paper ground, warm — cards float on it as brighter milk. */
+    --background: 45 22% 92%;
+    --foreground: 220 18% 20%;
 
-    --card: 42 45% 99%;
-    --card-foreground: 26 24% 16%;
+    --card: 45 40% 97%;
+    --card-foreground: 220 18% 20%;
 
-    --popover: 42 45% 99%;
-    --popover-foreground: 26 24% 16%;
+    --popover: 45 40% 97%;
+    --popover-foreground: 220 18% 20%;
 
-    --primary: 18 54% 50%;
-    --primary-foreground: 40 40% 98%;
+    /* Coat blue — the brand. */
+    --primary: 212 22% 43%;
+    --primary-foreground: 45 40% 98%;
 
-    --secondary: 34 30% 91%;
-    --secondary-foreground: 26 24% 22%;
+    /* Blue-milk tints for chips, pills, active states. */
+    --secondary: 214 20% 87%;
+    --secondary-foreground: 220 18% 24%;
 
-    --muted: 34 24% 92%;
-    --muted-foreground: 28 12% 42%;
+    --muted: 45 18% 87%;
+    --muted-foreground: 217 10% 44%;
 
-    --accent: 30 44% 90%;
-    --accent-foreground: 20 40% 24%;
+    --accent: 214 20% 89%;
+    --accent-foreground: 220 18% 22%;
 
-    --destructive: 2 72% 50%;
-    --destructive-foreground: 40 40% 98%;
+    --destructive: 4 70% 47%;
+    --destructive-foreground: 45 40% 98%;
 
     --warning: 36 92% 46%;
     --warning-foreground: 30 60% 12%;
-    --warning-strong: 30 90% 30%;  /* amber as small TEXT on light bg (AA) */
+    --warning-strong: 28 85% 32%;  /* amber as small TEXT on light bg (AA) */
 
-    --success: 146 52% 38%;
+    --success: 150 45% 33%;
     --success-foreground: 140 40% 97%;
 
-    --border: 32 22% 86%;
-    --input: 32 22% 86%;
-    --ring: 18 54% 50%;
+    /* Copper — BSH eye color. Micro-accents only: ring tips, tiny marks. */
+    --copper: 27 51% 45%;
 
-    --radius: 1rem;
+    --border: 45 14% 84%;
+    --input: 216 14% 82%;
+    --ring: 212 22% 43%;
 
-    /* Default per-cat accent palette (assigned by index in lib/cats). */
-    --cat-1: 18 60% 52%;   /* terracotta */
-    --cat-2: 190 45% 42%;  /* teal */
-    --cat-3: 268 38% 56%;  /* plum */
-    --cat-4: 142 45% 40%;  /* sage */
-    --cat-5: 340 55% 56%;  /* rose */
+    --radius: 1.1rem;
+
+    /* Per-cat accents = the actual coats (assigned by index in lib/cats):
+       1 Enoki chocolate · 2 Cheeto red · 3 Tudou cream. */
+    --cat-1: 22 39% 36%;   /* chocolate */
+    --cat-2: 20 61% 44%;   /* red (ginger) */
+    --cat-3: 40 48% 42%;   /* cream (deepened for contrast as a fill) */
+    --cat-4: 150 35% 38%;  /* sage — spare */
+    --cat-5: 340 45% 52%;  /* rose — spare */
   }
 
   .dark {
-    --background: 26 16% 10%;
-    --foreground: 40 22% 92%;
+    /* Ink blue, never black. */
+    --background: 217 24% 10%;
+    --foreground: 45 15% 90%;
 
-    --card: 25 15% 13%;
-    --card-foreground: 40 22% 92%;
+    --card: 217 22% 15%;
+    --card-foreground: 45 15% 90%;
 
-    --popover: 25 15% 13%;
-    --popover-foreground: 40 22% 92%;
+    --popover: 217 22% 15%;
+    --popover-foreground: 45 15% 90%;
 
-    --primary: 20 62% 58%;
-    --primary-foreground: 26 30% 12%;
+    --primary: 213 28% 70%;
+    --primary-foreground: 217 24% 12%;
 
-    --secondary: 28 12% 20%;
-    --secondary-foreground: 40 20% 90%;
+    --secondary: 216 18% 23%;
+    --secondary-foreground: 45 12% 88%;
 
-    --muted: 28 10% 20%;
-    --muted-foreground: 34 12% 64%;
+    --muted: 216 18% 20%;
+    --muted-foreground: 216 12% 65%;
 
-    --accent: 26 16% 24%;
-    --accent-foreground: 40 22% 92%;
+    --accent: 216 18% 25%;
+    --accent-foreground: 45 15% 90%;
 
-    --destructive: 2 68% 56%;
-    --destructive-foreground: 40 40% 98%;
+    --destructive: 4 65% 58%;
+    --destructive-foreground: 45 40% 98%;
 
     --warning: 38 90% 56%;
     --warning-foreground: 30 60% 10%;
-    --warning-strong: 38 90% 62%;
+    --warning-strong: 38 85% 64%;
 
-    --success: 146 46% 50%;
-    --success-foreground: 140 40% 10%;
+    --success: 150 40% 52%;
+    --success-foreground: 150 40% 10%;
 
-    --border: 28 12% 24%;
-    --input: 28 12% 26%;
-    --ring: 20 62% 58%;
+    --copper: 27 58% 59%;
 
-    --cat-1: 18 62% 58%;
-    --cat-2: 190 48% 52%;
-    --cat-3: 268 42% 66%;
-    --cat-4: 142 46% 52%;
-    --cat-5: 340 58% 66%;
+    --border: 216 18% 21%;
+    --input: 216 16% 27%;
+    --ring: 213 28% 70%;
+
+    --cat-1: 23 38% 62%;
+    --cat-2: 20 68% 62%;
+    --cat-3: 40 55% 66%;
+    --cat-4: 150 35% 55%;
+    --cat-5: 340 50% 68%;
   }
 }
 

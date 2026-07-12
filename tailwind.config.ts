@@ -10,6 +10,16 @@ const config: Config = {
   theme: {
     container: { center: true, padding: "1rem", screens: { "2xl": "480px" } },
     extend: {
+      fontFamily: {
+        sans: [
+          "var(--font-sans)",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Roboto",
+          "sans-serif",
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -33,6 +43,8 @@ const config: Config = {
           foreground: "hsl(var(--warning-foreground))",
           strong: "hsl(var(--warning-strong))",
         },
+        // BSH eye copper — micro-accents only (ring tip, active marks).
+        copper: "hsl(var(--copper) / <alpha-value>)",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

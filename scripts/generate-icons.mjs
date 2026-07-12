@@ -8,12 +8,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = join(root, "public", "icons");
 
-// Warm terracotta background + cream cat face. `pad` = extra safe-zone padding
-// fraction for maskable icons.
+// British Blue: coat-blue background + milk cat face + copper eyes (the BSH
+// signature). `pad` = extra safe-zone padding fraction for maskable icons.
 function svg({ pad = 0 } = {}) {
-  const bg = "#be5a37"; // ≈ hsl(18 54% 48%)
-  const cream = "#f7f3ee";
-  const dark = "#3a2418";
+  const bg = "#566c86"; // coat blue ≈ hsl(212 22% 43%)
+  const cream = "#f6f3ec"; // milk
+  const dark = "#232a35"; // ink
+  const copper = "#be7440"; // eyes
   const s = 512;
   const p = Math.round(s * pad);
   const inner = s - p * 2;
@@ -31,9 +32,13 @@ function svg({ pad = 0 } = {}) {
     <path d="M ${cx + faceR * 0.75} ${earY} l ${-earW} ${-earH} l ${-earW * 0.2} ${earH * 1.1} Z"/>
     <circle cx="${cx}" cy="${cy}" r="${faceR}"/>
   </g>
+  <g fill="${copper}">
+    <circle cx="${cx - faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.14}"/>
+    <circle cx="${cx + faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.14}"/>
+  </g>
   <g fill="${dark}">
-    <circle cx="${cx - faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.11}"/>
-    <circle cx="${cx + faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.11}"/>
+    <circle cx="${cx - faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.07}"/>
+    <circle cx="${cx + faceR * 0.38}" cy="${cy - faceR * 0.1}" r="${faceR * 0.07}"/>
     <path d="M ${cx} ${cy + faceR * 0.12} l ${-faceR * 0.09} ${faceR * 0.13} l ${faceR * 0.18} 0 Z"/>
   </g>
   <g stroke="${dark}" stroke-width="${faceR * 0.05}" stroke-linecap="round">

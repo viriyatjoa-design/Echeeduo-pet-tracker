@@ -21,8 +21,8 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "24px",
-          background: "#faf6f1",
-          color: "#3f3a34",
+          background: "#efece4",
+          color: "#232a35",
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
           textAlign: "center",
@@ -32,7 +32,7 @@ export default function GlobalError({
           <h1 style={{ fontSize: "1.125rem", fontWeight: 600, margin: "0 0 8px" }}>
             Something went wrong loading this page
           </h1>
-          <p style={{ fontSize: "0.875rem", color: "#8a8177", margin: "0 0 20px" }}>
+          <p style={{ fontSize: "0.875rem", color: "#757d86", margin: "0 0 20px" }}>
             It&apos;s usually temporary — a quick retry often fixes it.
           </p>
           <button
@@ -40,9 +40,9 @@ export default function GlobalError({
             onClick={() => reset()}
             style={{
               padding: "10px 20px",
-              borderRadius: "12px",
+              borderRadius: "999px",
               border: "none",
-              background: "#c2703e",
+              background: "#566c86",
               color: "#fff",
               fontSize: "0.875rem",
               fontWeight: 600,
@@ -52,7 +52,7 @@ export default function GlobalError({
             Try again
           </button>
           {error.digest && (
-            <p style={{ fontSize: "0.75rem", color: "#a89f94", marginTop: "16px" }}>
+            <p style={{ fontSize: "0.75rem", color: "#8a93a0", marginTop: "16px" }}>
               Ref: {error.digest}
             </p>
           )}

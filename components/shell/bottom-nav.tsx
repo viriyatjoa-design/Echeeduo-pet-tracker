@@ -57,16 +57,24 @@ export function BottomNav() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[3.5rem] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-medium transition-colors",
+                  "flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-semibold transition-colors",
                   active
-                    ? "text-primary"
+                    ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon
-                  className={cn("h-6 w-6", active && "stroke-[2.25]")}
-                  aria-hidden
-                />
+                {/* Active tab sits in a blue-milk pill (soft-wellness). */}
+                <span
+                  className={cn(
+                    "flex h-7 w-14 items-center justify-center rounded-full transition-colors",
+                    active && "bg-secondary text-primary",
+                  )}
+                >
+                  <Icon
+                    className={cn("h-5 w-5", active && "stroke-[2.25]")}
+                    aria-hidden
+                  />
+                </span>
                 <span>{label}</span>
               </Link>
             </li>

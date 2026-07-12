@@ -83,6 +83,17 @@ export function KcalRing({
             transform={`rotate(-90 ${CENTER} ${CENTER})`}
           />
         )}
+        {/* Copper tip at the progress end — the BSH "eye" (theme signature). */}
+        {hasTarget && fraction > 0.02 && (
+          <circle
+            cx={CENTER}
+            cy={CENTER - R}
+            r={STROKE * 0.28}
+            fill="hsl(var(--copper))"
+            transform={`rotate(${fraction * 360} ${CENTER} ${CENTER})`}
+            style={{ transition: "transform 500ms ease" }}
+          />
+        )}
       </svg>
 
       <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">

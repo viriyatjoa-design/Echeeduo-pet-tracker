@@ -22,6 +22,15 @@ Build-side:
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
 
+## Recent session (2026-07-12, day — British Blue retheme)
+- [x] **Full retheme to "British Blue"** (owner picked B+A mix from a 3-direction artifact
+  pitch): new token layer in globals.css (coat-blue primary, milk/ink-blue grounds, --copper
+  micro-accent token, cat accents = real coats choco/red/cream), Nunito variable self-hosted
+  (app/fonts + next/font/local + font-sans), Button→pills, Card→soft near-borderless,
+  BottomNav→active icon pill, KcalRing→copper progress-tip dot, PWA icons regenerated (blue
+  cat, copper eyes) + manifest/theme-color/theme-script colors + global-error inline colors.
+  Everything token-driven — no per-component color edits were needed beyond primitives.
+
 ## Recent session (2026-07-12, day — consumables)
 - [x] **Consumables ride existing activities** (owner-approved after brainstorm; migration 006):
   care events carry `consume_item_id`/`consume_qty` — the ✓ consumes stock (best-effort,

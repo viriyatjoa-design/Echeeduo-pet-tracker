@@ -1,17 +1,36 @@
 {
   "name": "Purrfect Log",
   "short_name": "Purrfect Log",
-  "description": "Family cat care tracker — feeding, weight, care & observations.",
+  "description": "Family cat care tracker \u2014 feeding, weight, care & observations.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f7f3ec",
-  "theme_color": "#be5a37",
-  "categories": ["health", "lifestyle", "utilities"],
+  "background_color": "#efece4",
+  "theme_color": "#566c86",
+  "categories": [
+    "health",
+    "lifestyle",
+    "utilities"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
