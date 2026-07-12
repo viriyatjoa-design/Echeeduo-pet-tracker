@@ -12,6 +12,10 @@ Owner-side (blocked on Rio):
 Build-side:
 - [x] **Milestone AI SHIPPED** (Kimi/Moonshot): health brief + vet summary on cat Health tab; label scanner in food form; graceful no-key state. Owner may need to set MOONSHOT_MODEL to the exact console model ID (code defaults to "kimi-k2.6")
 - [ ] Milestone 3 (SPEC §11): vet document vault, bloodwork tracking — NOT authorized yet
+- [ ] **Prod error masking sweep**: Next.js masks thrown Server Action errors in production.
+  AI actions converted to result objects (07-12); the OTHER actions (care, feeding, catalog,
+  members…) still throw friendly messages that prod replaces with a generic banner. Convert
+  user-facing expected errors to returned values app-wide.
 
 ## Recent session (2026-07-12, morning→day)
 - [x] "Already done?" toggle on New event — backdated care records (historical vaccinations); next occurrence chains from historical date (`logPastCareEvent`)
