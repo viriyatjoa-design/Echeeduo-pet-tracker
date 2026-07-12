@@ -29,6 +29,7 @@ import { compressImage } from "@/components/attachments/image-compress";
 import { logLitter } from "@/lib/actions/observation";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { analyzeLitterPhoto } from "@/lib/actions/ai";
+import { startAIJob, endAIJob } from "@/lib/ai-jobs";
 import { actionErrorMessage } from "@/lib/action-error";
 import { strings } from "@/lib/strings";
 import type { Cat, Lookup } from "@/lib/types";
@@ -161,6 +162,8 @@ export function LitterForm({
       // closes so saving never waits on the model. The result lands on the
       // row (refresh shows it); toasts report either way.
       if (analyze) {
+        // Job-store key lights the spinner on the journal/health entry too.
+        startAIJob(`litter:${id}`);
         void analyzeLitterPhoto(id)
           .then((res) => {
             if (res.ok) {
@@ -180,6 +183,9 @@ export function LitterForm({
               description: actionErrorMessage(err, ""),
               variant: "warning",
             });
+          })
+          .finally(() => {
+            endAIJob(`litter:${id}`);
           });
       }
     });
@@ -281,7 +287,6 @@ export function LitterForm({
               id="litter-photo"
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />

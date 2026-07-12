@@ -243,7 +243,6 @@ export function SymptomForm({
               id="symptom-photo"
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />

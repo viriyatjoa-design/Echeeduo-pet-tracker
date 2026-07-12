@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, Stethoscope, Loader2, Copy } from "lucide-react";
 import {
   Card,
@@ -12,19 +13,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { generateHealthBrief, generateVetSummary } from "@/lib/actions/ai";
-import { formatDateTime } from "@/lib/time";
+import { useAIJob, startAIJob, endAIJob } from "@/lib/ai-jobs";
 import { actionErrorMessage } from "@/lib/action-error";
+import { formatDateTime } from "@/lib/time";
 
 const t = {
   title: "AI health analysis",
   analysis: "Health analysis",
   vet: "Vet summary",
   thinking: "Thinking…",
+  thinkingNote:
+    "This takes a minute — you can leave this page, the result is saved here.",
   copy: "Copy",
   copied: "Copied to clipboard",
   copyFailed: "Couldn't copy — select the text instead.",
   generatedAt: "Generated",
   kindLabel: { analysis: "Health analysis", vet: "Vet summary" } as const,
+  ready: (kind: string) => `${kind} ready`,
   setupNote: "Add MOONSHOT_API_KEY in Vercel to enable (see SETUP.md).",
   genericError: "Something went wrong. Try again.",
 } as const;
@@ -35,10 +40,10 @@ export type StoredBrief = { text: string; at: string } | null;
 
 /**
  * Deep per-cat AI analysis (cat profile → Health tab). Results are STORED
- * (ai_briefs) — the last analysis/summary shows instantly on every visit; the
- * buttons regenerate (slow: this deliberately uses the thinking model over
- * the full 30-day history — the quick daily read lives on the dashboard as
- * the Morning report).
+ * (ai_briefs) and the in-flight spinner lives in the app-wide job store, so
+ * navigating away and back mid-generation keeps both the loading state and,
+ * once done, the result. The quick daily read lives on the dashboard as the
+ * Morning report.
  */
 export function HealthBriefCard({
   catId,
@@ -53,23 +58,37 @@ export function HealthBriefCard({
   storedAnalysis?: StoredBrief;
   storedVet?: StoredBrief;
 }) {
+  const router = useRouter();
   const { toast } = useToast();
-  const [pending, setPending] = React.useState<Kind | null>(null);
-  // What's displayed: freshest run this visit, else the newest stored text.
-  const initial: { kind: Kind; text: string; at: string } | null =
-    storedAnalysis && storedVet
-      ? storedAnalysis.at >= storedVet.at
-        ? { kind: "analysis", ...storedAnalysis }
-        : { kind: "vet", ...storedVet }
-      : storedAnalysis
-        ? { kind: "analysis", ...storedAnalysis }
-        : storedVet
-          ? { kind: "vet", ...storedVet }
-          : null;
-  const [result, setResult] = React.useState(initial);
+  const analysisRunning = useAIJob(`health:${catId}:analysis`);
+  const vetRunning = useAIJob(`health:${catId}:vet`);
+  const busy = analysisRunning || vetRunning;
+  // Result generated during THIS visit (freshest wins vs stored props below).
+  const [local, setLocal] = React.useState<{
+    kind: Kind;
+    text: string;
+    at: string;
+  } | null>(null);
+
+  // Display the newest of: this visit's result, stored analysis, stored vet.
+  // Stored props update via router.refresh() after a background run finishes.
+  const candidates = [
+    local,
+    storedAnalysis && { kind: "analysis" as const, ...storedAnalysis },
+    storedVet && { kind: "vet" as const, ...storedVet },
+  ].filter(Boolean) as { kind: Kind; text: string; at: string }[];
+  // Parse timestamps: DB rows use "+00:00" offsets, local uses "Z" — plain
+  // string comparison across the two formats is unreliable.
+  const result =
+    candidates.length > 0
+      ? candidates.reduce((a, b) =>
+          new Date(a.at).getTime() >= new Date(b.at).getTime() ? a : b,
+        )
+      : null;
 
   async function run(kind: Kind) {
-    setPending(kind);
+    const jobKey = `health:${catId}:${kind}`;
+    startAIJob(jobKey);
     try {
       // Actions return result objects (never throw for expected failures) so
       // the real error message survives production's server-error masking.
@@ -78,7 +97,9 @@ export function HealthBriefCard({
           ? await generateHealthBrief(catId)
           : await generateVetSummary(catId);
       if (res.ok) {
-        setResult({ kind, text: res.text, at: new Date().toISOString() });
+        setLocal({ kind, text: res.text, at: new Date().toISOString() });
+        toast({ title: t.ready(t.kindLabel[kind]), variant: "success" });
+        router.refresh();
       } else {
         toast({ title: res.error, variant: "destructive" });
       }
@@ -88,7 +109,7 @@ export function HealthBriefCard({
         variant: "destructive",
       });
     } finally {
-      setPending(null);
+      endAIJob(jobKey);
     }
   }
 
@@ -115,30 +136,34 @@ export function HealthBriefCard({
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            disabled={!aiReady || pending !== null}
+            disabled={!aiReady || busy}
             onClick={() => run("analysis")}
           >
-            {pending === "analysis" ? (
+            {analysisRunning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            {pending === "analysis" ? t.thinking : t.analysis}
+            {analysisRunning ? t.thinking : t.analysis}
           </Button>
           <Button
             type="button"
             variant="outline"
-            disabled={!aiReady || pending !== null}
+            disabled={!aiReady || busy}
             onClick={() => run("vet")}
           >
-            {pending === "vet" ? (
+            {vetRunning ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Stethoscope className="h-4 w-4" />
             )}
-            {pending === "vet" ? t.thinking : t.vet}
+            {vetRunning ? t.thinking : t.vet}
           </Button>
         </div>
+
+        {busy && (
+          <p className="text-sm text-muted-foreground">{t.thinkingNote}</p>
+        )}
 
         {!aiReady && (
           <p className="text-sm text-muted-foreground">{t.setupNote}</p>

@@ -29,6 +29,8 @@ const t = {
 
 export type CatCardData = {
   cat: Cat;
+  /** Signed avatar URL (resolved by the page); initials fallback without it. */
+  photoUrl?: string;
   kcal: number;
   target: number | null;
   treat: boolean;
@@ -50,6 +52,7 @@ export type CatCardData = {
  */
 export function CatCard({
   cat,
+  photoUrl,
   kcal,
   target,
   treat,
@@ -80,7 +83,7 @@ export function CatCard({
           href={`/cats/${cat.id}`}
           className="group flex items-center gap-3"
         >
-          <CatAvatar cat={cat} size={44} />
+          <CatAvatar cat={cat} url={photoUrl} size={44} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-lg font-semibold text-foreground">
               {cat.name}

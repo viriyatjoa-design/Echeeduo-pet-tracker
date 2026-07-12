@@ -269,7 +269,6 @@ export function FoodForm({
                 ref={scanInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={onScanFile}
               />

@@ -4,6 +4,7 @@ import { requireAppUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isAIReady } from "@/lib/ai";
 import { getLatestBrief } from "@/lib/briefs";
+import { listAttachments } from "@/lib/storage";
 import { strings } from "@/lib/strings";
 import { getLookupsByCategory } from "@/lib/lookups";
 import {
@@ -88,9 +89,18 @@ export default async function TodayPage() {
   const cats = (catsRes.data ?? []) as Cat[];
   const foods = (foodsRes.data ?? []) as Food[];
   const aiReady = isAIReady();
-  const morningBrief = aiReady
-    ? await getLatestBrief("morning_report", null)
-    : null;
+  // Morning report + one signed avatar URL per cat, in parallel.
+  const [morningBrief, avatarEntries] = await Promise.all([
+    aiReady ? getLatestBrief("morning_report", null) : Promise.resolve(null),
+    Promise.all(
+      cats.map((c) =>
+        listAttachments("cat", c.id).then(
+          (items) => [c.id, items[0]?.url ?? undefined] as const,
+        ),
+      ),
+    ),
+  ]);
+  const avatarByCat = new Map(avatarEntries);
   const templates = (templatesRes.data ?? []) as MealTemplate[];
   const templateItems = (templateItemsRes.data ?? []) as MealTemplateItem[];
 
@@ -178,6 +188,7 @@ export default async function TodayPage() {
             <CatCard
               key={cat.id}
               cat={cat}
+              photoUrl={avatarByCat.get(cat.id)}
               feedData={feedData}
               kcal={totals?.kcal ?? 0}
               target={target}

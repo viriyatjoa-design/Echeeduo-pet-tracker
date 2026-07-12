@@ -72,7 +72,6 @@ export function AttachmentUploader({
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={onPick}
         disabled={busy}

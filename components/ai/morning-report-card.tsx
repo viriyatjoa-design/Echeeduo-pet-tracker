@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { refreshMorningReport } from "@/lib/actions/ai";
+import { useAIJob, startAIJob, endAIJob } from "@/lib/ai-jobs";
 import { actionErrorMessage } from "@/lib/action-error";
 import { formatDateTime, formatDate } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -38,13 +39,14 @@ export function MorningReportCard({ brief }: MorningReportCardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [expanded, setExpanded] = React.useState(false);
-  const [pending, setPending] = React.useState(false);
+  // App-wide job state: the spinner survives navigating away and back.
+  const pending = useAIJob("morning-report");
 
   const firstLine =
     brief?.content.split("\n").find((l) => l.trim() !== "") ?? "";
 
   async function refresh() {
-    setPending(true);
+    startAIJob("morning-report");
     try {
       const res = await refreshMorningReport();
       if (res.ok) {
@@ -62,7 +64,7 @@ export function MorningReportCard({ brief }: MorningReportCardProps) {
         variant: "destructive",
       });
     } finally {
-      setPending(false);
+      endAIJob("morning-report");
     }
   }
 

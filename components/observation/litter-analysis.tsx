@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { compressImage } from "@/components/attachments/image-compress";
 import { uploadAttachmentAction } from "@/lib/actions/attachments";
 import { analyzeLitterPhoto } from "@/lib/actions/ai";
+import { useAIJob, startAIJob, endAIJob } from "@/lib/ai-jobs";
 import { formatDateTime } from "@/lib/time";
 import { actionErrorMessage } from "@/lib/action-error";
 
@@ -48,7 +49,9 @@ export function LitterAnalysis({
 }: LitterAnalysisProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [analyzing, setAnalyzing] = React.useState(false);
+  // App-wide job state — also lit by the litter form's post-save auto-analysis,
+  // and it survives navigating away and back mid-analysis.
+  const analyzing = useAIJob(`litter:${litterId}`);
   const [uploading, setUploading] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
@@ -59,7 +62,7 @@ export function LitterAnalysis({
   if (!analysis && !canAnalyze && !aiReady) return null;
 
   async function runAnalysis() {
-    setAnalyzing(true);
+    startAIJob(`litter:${litterId}`);
     try {
       const res = await analyzeLitterPhoto(litterId);
       if (res.ok) {
@@ -80,7 +83,7 @@ export function LitterAnalysis({
         variant: "destructive",
       });
     } finally {
-      setAnalyzing(false);
+      endAIJob(`litter:${litterId}`);
     }
   }
 
@@ -172,7 +175,6 @@ export function LitterAnalysis({
         ref={fileRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={onPhotoPicked}
       />

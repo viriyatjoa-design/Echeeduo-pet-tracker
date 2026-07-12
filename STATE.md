@@ -22,6 +22,12 @@ Build-side:
   user-facing expected errors to returned values app-wide.
 
 ## Recent session (2026-07-12, day — morning report)
+- [x] Owner trio: (1) photo pickers offer camera OR gallery (`capture="environment"`
+  removed from all 5 file inputs); (2) cat avatar photos now show on dashboard cards
+  (page passes signed URLs into `CatAvatar`); (3) AI loading survives navigation —
+  `lib/ai-jobs.ts` module-level job store + `useAIJob` (keys: morning-report,
+  health:{catId}:{kind}, litter:{id}); health card shows newest of local/stored result;
+  litter form's background analysis lights the journal entry's spinner too.
 - [x] **Prompt audit + soft-diagnosis policy** (owner-requested): family/vet prompts split
   (family = soft reads + home suggestions + red-flag escalation; vet = strictly factual);
   litter analysis gains "What you can try" section + litter-coating rule; morning report
