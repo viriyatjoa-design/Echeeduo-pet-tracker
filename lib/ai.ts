@@ -30,13 +30,11 @@ export async function askAI({
   messages,
   json = false,
   maxTokens = 2000,
-  temperature = 0.3,
 }: {
   messages: AIMessage[];
   /** Force a JSON-object response (OpenAI-style response_format). */
   json?: boolean;
   maxTokens?: number;
-  temperature?: number;
 }): Promise<string> {
   const key = process.env.MOONSHOT_API_KEY;
   if (!key) throw new Error(AI_SETUP_MESSAGE);
@@ -51,7 +49,8 @@ export async function askAI({
       model: MODEL,
       messages,
       max_tokens: maxTokens,
-      temperature,
+      // No temperature: Kimi K2.6 only accepts its fixed default (sending a
+      // custom value is rejected with "invalid temperature").
       ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
     // Briefs read a month of data; give the model time.

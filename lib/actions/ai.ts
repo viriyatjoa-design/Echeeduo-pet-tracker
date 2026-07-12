@@ -202,7 +202,6 @@ export async function scanFoodLabel(formData: FormData): Promise<ScanResult> {
   const raw = await askAI({
     json: true,
     maxTokens: 600,
-    temperature: 0.1,
     messages: [
       {
         role: "system",
