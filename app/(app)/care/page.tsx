@@ -25,31 +25,44 @@ function shortTime(time: string | null): string | null {
 function CareRow({
   event,
   typeLabels,
+  showDate = true,
 }: {
   event: CareEventWithCat;
   typeLabels: Map<string, string>;
+  /** false inside date-grouped sections (the group header already says it). */
+  showDate?: boolean;
 }) {
   const time = shortTime(event.due_time);
+  const meta = [
+    showDate && event.due_date ? relativeDay(event.due_date) : null,
+    time,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // Stacked layout: text gets the full card width (no one-letter titles on a
+  // phone); actions sit on their own row with full-size tap targets.
   return (
-    <li className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-      <CatAvatar cat={event.cat} size={40} />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          {typeLabels.get(event.event_type_id) ?? "Care"}
-        </p>
-        <p className="truncate font-medium text-foreground">{event.title}</p>
-        <p className="text-sm text-muted-foreground">
-          {event.due_date ? relativeDay(event.due_date) : "Anytime"}
-          {time ? ` · ${time}` : ""}
-        </p>
+    <li className="space-y-2 rounded-2xl border border-border bg-card p-3">
+      <div className="flex items-center gap-3">
+        <CatAvatar cat={event.cat} size={40} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+            {typeLabels.get(event.event_type_id) ?? "Care"}
+            {event.cat?.name ? ` · ${event.cat.name}` : ""}
+          </p>
+          <p className="truncate font-medium text-foreground">{event.title}</p>
+          {meta && <p className="text-sm text-muted-foreground">{meta}</p>}
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <CompleteButton id={event.id} />
+      <div className="flex items-center justify-end gap-1">
         <RescheduleForm
           id={event.id}
           dueDate={event.due_date}
           dueTime={event.due_time}
+          iconOnly
         />
+        <CompleteButton id={event.id} className="min-w-28" />
       </div>
     </li>
   );
@@ -125,7 +138,12 @@ export default async function CarePage() {
           </h2>
           <ul className="space-y-2">
             {today.map((e) => (
-              <CareRow key={e.id} event={e} typeLabels={typeLabels} />
+              <CareRow
+                key={e.id}
+                event={e}
+                typeLabels={typeLabels}
+                showDate={false}
+              />
             ))}
           </ul>
         </section>
@@ -154,7 +172,12 @@ export default async function CarePage() {
               </p>
               <ul className="space-y-2">
                 {group.events.map((e) => (
-                  <CareRow key={e.id} event={e} typeLabels={typeLabels} />
+                  <CareRow
+                    key={e.id}
+                    event={e}
+                    typeLabels={typeLabels}
+                    showDate={false}
+                  />
                 ))}
               </ul>
             </div>

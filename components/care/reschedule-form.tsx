@@ -30,10 +30,13 @@ export function RescheduleForm({
   id,
   dueDate,
   dueTime,
+  iconOnly = false,
 }: {
   id: string;
   dueDate?: string | null;
   dueTime?: string | null;
+  /** Compact calendar-icon trigger for tight rows (label via aria). */
+  iconOnly?: boolean;
 }) {
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
@@ -67,15 +70,27 @@ export function RescheduleForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => onOpenChange(true)}
-      >
-        <CalendarClock className="h-4 w-4" />
-        {strings.care.reschedule}
-      </Button>
+      {iconOnly ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={strings.care.reschedule}
+          onClick={() => onOpenChange(true)}
+        >
+          <CalendarClock className="h-5 w-5" />
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onOpenChange(true)}
+        >
+          <CalendarClock className="h-4 w-4" />
+          {strings.care.reschedule}
+        </Button>
+      )}
 
       <DialogContent>
         <DialogHeader>
