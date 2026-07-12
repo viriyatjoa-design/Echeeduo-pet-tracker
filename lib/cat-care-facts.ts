@@ -10,6 +10,27 @@
  * these real numbers instead of generic caution.
  */
 
+/**
+ * Numeric British Shorthair references used by the Health Scorecard (kept beside
+ * the human-readable CARE_GUIDE strings so there's one source of truth). Bands
+ * are directional — a cat outside them is "worth watching", never "diagnosed".
+ */
+export const BREED_REF = {
+  /** Ideal lean weight band (grams) at BCS 5, by sex. */
+  idealWeightGrams: {
+    male: { min: 5000, max: 7000 },
+    female: { min: 3500, max: 5500 },
+    // No sex on file → the widest defensible band so we don't false-flag.
+    unknown: { min: 3500, max: 7000 },
+  },
+  /** Fallback BCS target when a cat has none set (per-cat values win). */
+  bcsTarget: { min: 4, max: 5 },
+  /** Total daily water incl. food moisture. */
+  waterMlPerKgPerDay: 50,
+  /** Eating adherence: fraction of the daily kcal target that reads as "on track". */
+  kcalOnTrack: { min: 0.8, max: 1.15 },
+} as const;
+
 export type GuideItem = { label: string; value: string };
 export type GuideSection = {
   id: string;

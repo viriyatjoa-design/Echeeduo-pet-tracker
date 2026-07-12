@@ -32,6 +32,16 @@ Build-side:
   "Ch…" truncation); catalog food cards meta+actions one row, redundant Foods/Items h2s
   removed; care rows + cat card rhythm tightened. 44px tap targets preserved.
 
+## Feature (2026-07-12, overnight — Health Scorecard)
+- [x] **Health Scorecard** (per cat, cat profile → Health tab): grades weight / body condition /
+  eating / hydration / preventive-care against the British Shorthair references (BREED_REF in
+  cat-care-facts.ts). Pure engine `lib/health-score.ts` (status good/watch/attention/info/unknown,
+  overall rollup gated on a real health signal) + server gatherer `lib/health-score-data.ts`
+  (14-day Jakarta window: avg kcal on fed-days, avg logged water, overdue care) + `ScorecardView`
+  UI. Hydration is INFORMATIONAL only (wet-fed cats never false-flag). NO migration — computes
+  from existing data, degrades with "log a weight" nudges. 25 unit tests (64 total). Build green,
+  visually verified light+dark. [audit fixes to follow]
+
 ## Hardening session (2026-07-12, evening — 5-track multi-agent)
 - [x] **Adversarial audit** (55-agent workflow, find→refute→fix): 20 verified findings fixed
   (0 critical, 5 major, 15 minor). Majors: deactivated-cat care leak (getOpenCareEvents inner-

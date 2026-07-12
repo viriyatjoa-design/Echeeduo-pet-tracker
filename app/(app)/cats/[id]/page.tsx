@@ -11,6 +11,7 @@ import { FeedingHistory } from "@/components/feed/feeding-history";
 import { WeightSection } from "@/components/weight/weight-section";
 import { HealthSection } from "@/components/observation/health-section";
 import { HealthBriefCard } from "@/components/ai/health-brief-card";
+import { HealthScorecard } from "@/components/health/health-scorecard";
 import { isAIReady } from "@/lib/ai";
 import { getLatestBrief } from "@/lib/briefs";
 import { CatCareTimeline } from "@/components/care/cat-care-timeline";
@@ -85,6 +86,7 @@ export default async function CatProfilePage({
         </TabsContent>
         <TabsContent value="health">
           <div className="space-y-5">
+            <HealthScorecard cat={cat} />
             <HealthBriefCard
               catId={id}
               catName={cat.name}
