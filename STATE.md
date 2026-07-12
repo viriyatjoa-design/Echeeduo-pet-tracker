@@ -23,6 +23,10 @@ Build-side:
   user-facing expected errors to returned values app-wide.
 
 ## Recent session (2026-07-12, day — British Blue retheme)
+- [x] **Compact kcal layout** (owner-picked "B + thin bar" over the big ring): progress arc
+  around the cat's avatar (`AvatarKcalRing` in cat-card) + kcal numbers right-aligned in the
+  header + thin `KcalBar` with copper tip under it (treat/over badges live on the bar row).
+  Big `kcal-ring.tsx` deleted; card is ~140px shorter per cat.
 - [x] **Full retheme to "British Blue"** (owner picked B+A mix from a 3-direction artifact
   pitch): new token layer in globals.css (coat-blue primary, milk/ink-blue grounds, --copper
   micro-accent token, cat accents = real coats choco/red/cream), Nunito variable self-hosted

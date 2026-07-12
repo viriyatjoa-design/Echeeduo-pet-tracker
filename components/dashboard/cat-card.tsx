@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Droplets, ChevronRight, Utensils } from "lucide-react";
+import { Droplets, Utensils } from "lucide-react";
 import type { Cat, CareEvent, WeightLog } from "@/lib/types";
 import type { KcalPoint, LastFed } from "@/lib/feeding-queries";
 import type { WeightTrend } from "@/lib/weight";
@@ -13,7 +13,7 @@ import { WeightBadge } from "@/components/weight/weight-badge";
 import { CareChips } from "@/components/care/care-chips";
 import { FeedDialog } from "@/components/feed/feed-dialog";
 import type { FeedData } from "@/components/feed/quick-feed";
-import { KcalRing } from "./kcal-ring";
+import { KcalBar } from "./kcal-bar";
 import { KcalSparkline } from "./kcal-sparkline";
 
 const t = {
@@ -25,7 +25,70 @@ const t = {
   weight: "Weight",
   noWeight: "No weight logged",
   last7: "Last 7 days",
+  ofKcal: (target: number) => `of ${target} kcal`,
+  kcalToday: "kcal today",
 } as const;
+
+/**
+ * The cat's avatar wrapped in its daily-kcal progress arc (owner-picked
+ * compact layout: the cat's face fills up as they eat through their day).
+ */
+function AvatarKcalRing({
+  cat,
+  photoUrl,
+  fraction,
+}: {
+  cat: Cat;
+  photoUrl?: string;
+  /** 0..1 of today's target; 0 when no target. */
+  fraction: number;
+}) {
+  const SIZE = 54;
+  const STROKE = 3.5;
+  const R = (SIZE - STROKE) / 2;
+  const CIRC = 2 * Math.PI * R;
+  const accent = `hsl(var(--cat-${cat.accent_index}))`;
+
+  return (
+    <span
+      className="relative grid flex-none place-items-center"
+      style={{ width: SIZE, height: SIZE }}
+    >
+      <svg
+        width={SIZE}
+        height={SIZE}
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="absolute inset-0"
+        aria-hidden
+      >
+        <circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={R}
+          fill="none"
+          strokeWidth={STROKE}
+          className="stroke-muted"
+        />
+        {fraction > 0 && (
+          <circle
+            cx={SIZE / 2}
+            cy={SIZE / 2}
+            r={R}
+            fill="none"
+            strokeWidth={STROKE}
+            strokeLinecap="round"
+            stroke={accent}
+            strokeDasharray={CIRC}
+            strokeDashoffset={CIRC * (1 - Math.min(fraction, 1))}
+            transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+            style={{ transition: "stroke-dashoffset 500ms ease" }}
+          />
+        )}
+      </svg>
+      <CatAvatar cat={cat} url={photoUrl} size={44} />
+    </span>
+  );
+}
 
 export type CatCardData = {
   cat: Cat;
@@ -78,25 +141,40 @@ export function CatCard({
       <div className="h-1 w-full bg-cat/70" />
 
       <div className="space-y-4 p-4">
-        {/* Header → profile */}
+        {/* Header → profile. The kcal readout lives HERE (owner-picked compact
+            layout): progress arc around the avatar + numbers on the right. */}
         <Link
           href={`/cats/${cat.id}`}
           className="group flex items-center gap-3"
         >
-          <CatAvatar cat={cat} url={photoUrl} size={44} />
+          <AvatarKcalRing
+            cat={cat}
+            photoUrl={photoUrl}
+            fraction={target != null && target > 0 ? kcal / target : 0}
+          />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-lg font-semibold text-foreground">
+            <span className="block truncate text-lg font-bold text-foreground">
               {cat.name}
             </span>
             <span className="block truncate text-xs text-muted-foreground">
               {cat.breed}
             </span>
           </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          <span className="shrink-0 text-right">
+            <span
+              className="block text-xl font-bold leading-tight tabular-nums"
+              style={{ color: `hsl(var(--cat-${cat.accent_index}))` }}
+            >
+              {round1(kcal)}
+            </span>
+            <span className="block text-[11px] font-medium text-muted-foreground">
+              {target != null && target > 0 ? t.ofKcal(target) : t.kcalToday}
+            </span>
+          </span>
         </Link>
 
-        {/* The signature ring */}
-        <KcalRing
+        {/* Thin daily progress bar (replaces the big ring) */}
+        <KcalBar
           kcal={kcal}
           target={target}
           accentIndex={cat.accent_index}
