@@ -8,8 +8,18 @@ type Probe =
   | { ms: number; status: number; ok: boolean; body: string }
   | { ms: number; error: string };
 
+type ProbeOpts = {
+  messages?: { role: string; content: string }[];
+  disableThinking?: boolean;
+  timeoutMs?: number;
+};
+
 /** One raw call to Moonshot, mirroring lib/ai.ts config, with timing. */
-async function probe(model: string, maxTokens: number): Promise<Probe> {
+async function probe(
+  model: string,
+  maxTokens: number,
+  opts: ProbeOpts = {},
+): Promise<Probe> {
   const key = process.env.MOONSHOT_API_KEY;
   const base = process.env.MOONSHOT_BASE_URL ?? "https://api.moonshot.ai/v1";
   const t0 = Date.now();
@@ -22,10 +32,11 @@ async function probe(model: string, maxTokens: number): Promise<Probe> {
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "user", content: "Reply with exactly: ok" }],
+        messages: opts.messages ?? [{ role: "user", content: "Reply with exactly: ok" }],
         max_tokens: maxTokens,
+        ...(opts.disableThinking ? { thinking: { type: "disabled" } } : {}),
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
     });
     const ms = Date.now() - t0;
     const body = await res.text();
@@ -35,6 +46,28 @@ async function probe(model: string, maxTokens: number): Promise<Probe> {
     return { ms, error: e instanceof Error ? `${e.name}: ${e.message}` : String(e) };
   }
 }
+
+// A realistic, analytical prompt roughly the size/shape of a real health brief,
+// to compare thinking-on (slow) vs thinking-disabled (fast).
+const REAL_MESSAGES = [
+  {
+    role: "system",
+    content:
+      "You write short, warm cat health summaries for a family. Give a soft read plus 1-3 low-risk suggestions; escalate red flags to a vet. Under 200 words.",
+  },
+  {
+    role: "user",
+    content:
+      'Write a health analysis of Tudou. Sections: "How\'s Tudou doing", "Eating", "Weight", "Watch for". DATA: ' +
+      JSON.stringify({
+        cat: { name: "Tudou", breed: "British Shorthair", neutered: true, daily_kcal_target: 340 },
+        weights_kg: [{ date: "2026-06-01", kg: "4.60", bcs: 5 }, { date: "2026-05-01", kg: "4.50", bcs: 5 }],
+        daily_kcal_last_30d: Array.from({ length: 30 }, (_, i) => ({ date: `2026-06-${(i % 28) + 1}`, kcal: 300 + (i % 5) * 15, meals: 3 })),
+        water_ml_last_14d: 210,
+        litter_recent: [{ date: "2026-06-30", urine: true, stool: true, consistency: "firm" }],
+      }),
+  },
+];
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -62,6 +95,17 @@ export default async function AiSelfTestPage() {
   const big =
     hasKey && small && "ok" in small && small.ok
       ? await probe(model, 2000)
+      : null;
+
+  // The real test: a realistic health-brief prompt with thinking DISABLED —
+  // this mirrors the actual fix and should return in a few seconds.
+  const real =
+    hasKey && small && "ok" in small && small.ok
+      ? await probe(model, 1200, {
+          messages: REAL_MESSAGES,
+          disableThinking: true,
+          timeoutMs: 50_000,
+        })
       : null;
 
   return (
@@ -114,6 +158,26 @@ export default async function AiSelfTestPage() {
             <>
               <Row label="Failed" value={big.error} />
               <Row label="Time before failure" value={`${big.ms} ms`} />
+            </>
+          )}
+        </section>
+      )}
+
+      {real && (
+        <section className="rounded-2xl border-2 border-primary bg-card p-4">
+          <h2 className="mb-2 text-sm font-bold text-foreground">
+            Probe 3 — REAL health brief, thinking disabled (the fix)
+          </h2>
+          {"ok" in real ? (
+            <>
+              <Row label="Result" value={real.ok ? `HTTP ${real.status} OK` : `HTTP ${real.status} (error)`} />
+              <Row label="Time" value={`${real.ms} ms`} />
+              <Row label="Response body (first 600 chars)" value={real.body} />
+            </>
+          ) : (
+            <>
+              <Row label="Failed" value={real.error} />
+              <Row label="Time before failure" value={`${real.ms} ms`} />
             </>
           )}
         </section>

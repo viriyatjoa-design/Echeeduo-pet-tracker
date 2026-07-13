@@ -58,33 +58,48 @@ export async function askAI({
   const key = process.env.MOONSHOT_API_KEY;
   if (!key) throw new Error(AI_SETUP_MESSAGE);
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: maxTokens,
-      // No temperature: Kimi K2.6 only accepts its fixed default (sending a
-      // custom value is rejected with "invalid temperature").
-      ...(json ? { response_format: { type: "json_object" } } : {}),
-    }),
-    // Bounded so we return our own message before the platform kills the
-    // function (see AI_TIMEOUT_MS).
-    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-  }).catch((err: unknown) => {
-    // AbortSignal.timeout throws a TimeoutError; turn network/timeout failures
-    // into a clear, retryable message instead of a raw DOMException string.
-    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
-      throw new Error(
-        "The AI took too long to answer and timed out. Tap to try again — it's usually quicker the second time. (The free hosting plan limits each request to 60 seconds.)",
-      );
-    }
-    throw err;
-  });
+  const baseBody: Record<string, unknown> = {
+    model,
+    messages,
+    max_tokens: maxTokens,
+    // No temperature: Kimi K2.6 only accepts its fixed default (sending a
+    // custom value is rejected with "invalid temperature").
+    ...(json ? { response_format: { type: "json_object" } } : {}),
+  };
+
+  async function post(body: Record<string, unknown>) {
+    return fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify(body),
+      // Bounded so we return our own message before the platform kills the
+      // function (see AI_TIMEOUT_MS).
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    }).catch((err: unknown) => {
+      // AbortSignal.timeout throws a TimeoutError; turn network/timeout
+      // failures into a clear, retryable message.
+      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+        throw new Error(
+          "The AI took too long to answer and timed out. Tap to try again — it's usually quicker the second time. (The free hosting plan limits each request to 60 seconds.)",
+        );
+      }
+      throw err;
+    });
+  }
+
+  // Kimi K2.6 is a REASONING model: on an analytical prompt its hidden thinking
+  // trace can run for tens of seconds and blow the function timeout, even though
+  // the same model answers a trivial prompt in ~1s. Disable thinking for these
+  // short, policy-guided family outputs — the system prompt already carries the
+  // rules, so a direct answer is fine and dramatically faster. If a model/plan
+  // rejects the field (400), fall back to a plain request so we're never worse.
+  let res = await post({ ...baseBody, thinking: { type: "disabled" } });
+  if (res.status === 400) {
+    res = await post(baseBody);
+  }
 
   if (!res.ok) {
     let detail = `${res.status}`;
