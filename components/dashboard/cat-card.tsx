@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { Utensils, Droplets } from "lucide-react";
 import type { Cat, CareEvent, WeightLog } from "@/lib/types";
 import type { KcalPoint, LastFed } from "@/lib/feeding-queries";
 import type { WeightTrend } from "@/lib/weight";
@@ -27,6 +28,8 @@ const t = {
   kcalOver: "kcal · over",
   ml: "ml",
   mlFull: "ml · full ✓",
+  feedChip: "Feed",
+  waterChip: "Water",
 } as const;
 
 /** A tappable feeding-station cell (a bowl + its numbers). */
@@ -157,6 +160,12 @@ export function CatCard({
                     {foodOver ? t.kcalOver : t.kcal}
                   </span>
                 </span>
+                {/* Action chip — the whole cell is the button; this makes it read
+                    as one. */}
+                <span className="inline-flex items-center gap-1 rounded-full bg-cat/10 px-2.5 py-1 text-[11px] font-bold text-cat">
+                  <Utensils className="h-3.5 w-3.5" aria-hidden />
+                  {t.feedChip}
+                </span>
               </button>
             }
           />
@@ -190,6 +199,17 @@ export function CatCard({
                   >
                     {waterFull ? t.mlFull : t.ml}
                   </span>
+                </span>
+                {/* Matching chip so the water bowl reads as a button too. */}
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{
+                    color: "hsl(var(--water))",
+                    backgroundColor: "hsl(var(--water) / 0.14)",
+                  }}
+                >
+                  <Droplets className="h-3.5 w-3.5" aria-hidden />
+                  {t.waterChip}
                 </span>
               </>
             }
