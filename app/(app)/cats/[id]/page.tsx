@@ -26,6 +26,10 @@ const t = {
   care: "Care",
 } as const;
 
+// Health analysis / vet summary / litter analysis run here and can take tens
+// of seconds; give them the full Vercel budget (Hobby caps at 60s).
+export const maxDuration = 60;
+
 export default async function CatProfilePage({
   params,
 }: {

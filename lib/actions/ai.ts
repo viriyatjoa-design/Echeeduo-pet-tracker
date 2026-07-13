@@ -196,7 +196,7 @@ export async function generateHealthBrief(catId: string): Promise<AIResult> {
         content: `Write a health analysis of ${data.cat.name} for the family. Sections: "How's ${data.cat.name} doing" (2-3 sentences overall read), "Eating" (logged intake vs the daily kcal target, appetite trend), "Weight", "Watch for" (patterns to keep an eye on or mention to the vet, or "nothing concerning" if so), "What you can try" (1-3 practical suggestions tied to the data — hydration, wet-food share, fiber, portion pacing; skip this section entirely if everything looks normal), "Coming up" (open care items). Under 280 words total.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-      maxTokens: 6000,
+      maxTokens: 4000,
     });
     await saveBriefQuietly("health_analysis", catId, text, me.id);
     revalidatePath(`/cats/${catId}`);
@@ -221,7 +221,7 @@ export async function generateVetSummary(catId: string): Promise<AIResult> {
         content: `Write a one-page summary of ${data.cat.name} for a VETERINARIAN visit. Sections: "Patient" (signalment: breed, sex, neuter status, age if birth date known), "Weight & body condition" (trend with dates), "Diet & intake" (average daily logged kcal, target, appetite changes), "Elimination & water" (litter observations, water intake), "Recent symptoms" (dated list), "Care history" (vaccinations/treatments with dates — include everything dated), "Owner questions" (2-3 suggested questions based on the data). Under 350 words.\n\nDATA:\n${JSON.stringify(data)}`,
       },
     ],
-      maxTokens: 6000,
+      maxTokens: 4000,
     });
     await saveBriefQuietly("vet_summary", catId, text, me.id);
     revalidatePath(`/cats/${catId}`);
@@ -340,8 +340,10 @@ export async function analyzeLitterPhoto(litterLogId: string): Promise<AIResult>
 
     // Storage is private: fetch via the signed URL server-side and inline the
     // image as a data URL (same pattern as the label scanner).
+    // Keep the download short: on the free plan the whole request (fetch +
+    // analysis) must finish inside ~60s, so the photo can't eat 30s of it.
     const imgRes = await fetch(photo.url, {
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(12_000),
     });
     if (!imgRes.ok) throw new Error("Couldn't load the photo — try again.");
     const buf = Buffer.from(await imgRes.arrayBuffer());

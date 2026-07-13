@@ -9,6 +9,9 @@ import { generateMorningReport } from "@/lib/briefs";
  * manual Refresh button still works, it's a Server Action, not this route).
  */
 export const dynamic = "force-dynamic";
+// AI generation can run tens of seconds; claim the max the Vercel plan allows
+// (Hobby caps at 60s) so the function isn't killed before Kimi answers.
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;

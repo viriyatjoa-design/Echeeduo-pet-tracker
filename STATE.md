@@ -9,7 +9,8 @@ Owner-side (blocked on Rio):
 - [ ] **Run `005_ai_briefs.sql` in Supabase SQL Editor** (ai_briefs table; morning report + saved analyses need it)
 - [ ] **Run `006_care_consume.sql` in Supabase SQL Editor** (AFTER 003 — care↔inventory consume link, 'opened' reason, tube/bag/pack units)
 - [ ] **Set `CRON_SECRET` in Vercel** (any long random string) + redeploy — the nightly morning report is rejected until then (manual Refresh works once 005 is run)
-- [ ] Optional: set `MOONSHOT_VISION_MODEL` in Vercel (vision-capable non-thinking model, e.g. `kimi-latest` — verify ID in console) for faster photo analysis + morning report
+- [ ] ~~Optional: set `MOONSHOT_VISION_MODEL` (`kimi-latest`)~~ — kimi-latest was DISCONTINUED (Jan 2026). Current Moonshot lineup (K2.5/K2.6/K2.7) are all heavy thinking models; there is no fast non-thinking model to point photo/brief jobs at. Speed comes from timeout tuning instead (see AI timeout fix below), not a model swap.
+- [ ] **On Vercel Pro?** Then AI has more headroom: set `AI_TIMEOUT_MS=240000` in Vercel AND bump `export const maxDuration` from 60 → 300 on the AI route segments (cron route + dashboard/cat/journal/catalog pages). On Hobby leave both as-is (60s cap).
 - [ ] Custom SMTP (resend.com) so magic-link emails aren't capped at ~2/hour — wife's login failed on this once
 - [ ] Fill cat details (sex/birth/neutered) + first weights to unlock kcal targets — status unconfirmed
 - [x] Kimi/Moonshot API key set by owner; model `kimi-k2.6` confirmed working (briefs + scanner)
@@ -21,6 +22,22 @@ Build-side:
   AI actions converted to result objects (07-12); the OTHER actions (care, feeding, catalog,
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
+
+## Fix (2026-07-13 — AI analyses timing out on Vercel Hobby)
+- [x] **Root cause:** all AI (health analysis, morning brief, litter/stool, label scan) funnels
+  through `askAI` (Kimi K2.6 thinking model). No `maxDuration` was set on ANY route, so Vercel's
+  low default budget killed the request before Kimi answered; the client also waited a full 90s
+  (over Hobby's 60s function cap) so failures surfaced as raw "operation aborted due to timeout".
+  Moonshot itself was NOT down (status page normal); key/credits/model were fine. Owner is on
+  **Vercel Hobby (60s function cap)**.
+- [x] **Fix:** `export const maxDuration = 60` on all AI route segments (cron route + dashboard,
+  cat profile, journal, catalog pages) so functions get the full Hobby budget. `lib/ai.ts` abort
+  90s→`AI_TIMEOUT_MS` (default 50s, env-tunable, stays under the 60s cap) + timeout/abort errors
+  now throw a friendly retryable message. Litter photo download 30s→12s (leaves room for the
+  analysis inside 60s). Health + vet analyses maxTokens 6000→4000 (faster completion; still ample
+  for the <280/<350-word bounded outputs). Build+tsc green, 71 tests pass.
+- [ ] **If deep health analysis still times out on Hobby:** the K2.6 thinking model can legitimately
+  need >60s; the robust fix is Vercel Pro (see backlog note to raise maxDuration→300 + AI_TIMEOUT_MS).
 
 ## Feature (2026-07-13 — Feeding station: paired filling bowls)
 - [x] **Feeding station on the Today cat cards** (owner-picked "filling cat bowl" visualization,

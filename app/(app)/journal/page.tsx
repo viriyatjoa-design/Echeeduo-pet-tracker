@@ -31,6 +31,10 @@ const t = {
   sev: ["Mild", "Moderate", "Severe"] as const,
 } as const;
 
+// Litter photo analysis runs here and can take tens of seconds; give it the
+// full Vercel budget (Hobby caps at 60s).
+export const maxDuration = 60;
+
 export default async function JournalPage() {
   await requireAppUser();
 

@@ -34,6 +34,10 @@ const t = {
   goToSettings: "Open Settings",
 } as const;
 
+// Server Actions triggered here (morning-report refresh) can run tens of
+// seconds; give them the full Vercel budget (Hobby caps at 60s).
+export const maxDuration = 60;
+
 export default async function TodayPage() {
   await requireAppUser();
   const database = db();

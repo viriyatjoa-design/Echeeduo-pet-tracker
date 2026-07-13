@@ -27,6 +27,14 @@ export function isAIReady(): boolean {
   return Boolean(process.env.MOONSHOT_API_KEY);
 }
 
+/**
+ * How long a single AI call may run before we abort with a friendly message.
+ * Kept UNDER the Vercel function ceiling (Hobby caps functions at 60s) so the
+ * user sees our "took too long" message instead of a raw platform 504. Bump
+ * `AI_TIMEOUT_MS` in Vercel if you move to Pro (functions up to 300s).
+ */
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? 50_000);
+
 type TextPart = { type: "text"; text: string };
 type ImagePart = { type: "image_url"; image_url: { url: string } };
 export type AIMessage = {
@@ -64,8 +72,18 @@ export async function askAI({
       // custom value is rejected with "invalid temperature").
       ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
-    // Briefs read a month of data; give the model time.
-    signal: AbortSignal.timeout(90_000),
+    // Bounded so we return our own message before the platform kills the
+    // function (see AI_TIMEOUT_MS).
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+  }).catch((err: unknown) => {
+    // AbortSignal.timeout throws a TimeoutError; turn network/timeout failures
+    // into a clear, retryable message instead of a raw DOMException string.
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(
+        "The AI took too long to answer and timed out. Tap to try again — it's usually quicker the second time. (The free hosting plan limits each request to 60 seconds.)",
+      );
+    }
+    throw err;
   });
 
   if (!res.ok) {

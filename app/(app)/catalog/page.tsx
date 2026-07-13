@@ -21,6 +21,10 @@ const t = {
   inventory: "Inventory",
 } as const;
 
+// The food-label scanner runs here and can take tens of seconds; give it the
+// full Vercel budget (Hobby caps at 60s).
+export const maxDuration = 60;
+
 export default async function CatalogPage() {
   await requireAppUser();
 
