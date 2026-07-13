@@ -16,6 +16,16 @@ export function todayInTz(tz: string = APP_TZ): string {
   }).format(new Date());
 }
 
+/** 'YYYY-MM-DD' for the instant `iso`, in the app timezone. */
+export function dayInTz(iso: string, tz: string = APP_TZ): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
 /** 'YYYY-MM-DD' N days from today (in app tz), positive = future. */
 export function addDaysToDate(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
