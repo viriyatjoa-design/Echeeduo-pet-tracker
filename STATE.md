@@ -22,6 +22,30 @@ Build-side:
   members…) still throw friendly messages that prod replaces with a generic banner. Convert
   user-facing expected errors to returned values app-wide.
 
+## Feature (2026-07-13 — Feeding station: paired filling bowls)
+- [x] **Feeding station on the Today cat cards** (owner-picked "filling cat bowl" visualization,
+  paired food + water). New `components/feed/feeding-bowls.tsx` — pure/presentational SVG
+  `FoodBowl` + `WaterBowl` (viewBox 128×108, shared ceramic silhouette). Food fills with a
+  kibble mound in the cat's coat accent (`--cat-N`) and **heaps above the rim + amber treat**
+  when over target (or when a snack/`treat` was logged); water fills blue with a wavy waterline.
+  Deterministic (fixed speck table, no random/time → no hydration mismatch); every gradient/clip
+  id namespaced by an `id` prop so many bowls coexist.
+- [x] **Cat card reworked** (`components/dashboard/cat-card.tsx`): the bowls ARE the log buttons —
+  tap food → FeedDialog (preselected), tap water → water dialog. Replaced the avatar kcal-ring,
+  the thin KcalBar, and the old Feed-button/water-pill row (kcal/water numbers now sit under each
+  bowl; a cat-mood line — "nearly there" / "over target — treat day 🐾" / "on track" — replaces
+  the breed subline when a target exists). `KcalBar` component is now unused (kept, not deleted).
+- [x] **Water goal is weight-derived**: ≈50 ml/kg/day from `BREED_REF.waterMlPerKgPerDay`
+  (needs a logged weight; shows bare ml with no denominator otherwise). "ml · full ✓" (success)
+  at/over goal — encouraging, never scolding.
+- [x] `CatWaterButton` gained `trigger` / `triggerClassName` props so the water bowl can be its
+  dialog trigger (default pill preserved for any other caller).
+- [x] New tokens in `app/globals.css`: `--water`, `--water-lite`, `--bowl-shadow-base`
+  (light + dark). tsc + build green (16 routes), 71 tests pass. Verified light+dark against the
+  real component via a throwaway `/preview` harness (removed before commit).
+- [ ] **Not yet built** (agreed direction, optional follow-up): big bowls inside the Feed / Water
+  dialogs. Card station is the shipped slice.
+
 ## Recent session (2026-07-12, day — vertical-space audit)
 - [x] **Vertical-space audit** (owner-requested with screenshots): page subtitles removed
   app-wide; page H1s 2xl→xl (Today merges the date inline, greeting dropped); dialog

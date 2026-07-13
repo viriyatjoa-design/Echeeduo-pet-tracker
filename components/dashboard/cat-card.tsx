@@ -1,93 +1,46 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Utensils } from "lucide-react";
 import type { Cat, CareEvent, WeightLog } from "@/lib/types";
 import type { KcalPoint, LastFed } from "@/lib/feeding-queries";
 import type { WeightTrend } from "@/lib/weight";
 import { gramsToKg } from "@/lib/weight";
+import { BREED_REF } from "@/lib/cat-care-facts";
 import { formatTime } from "@/lib/time";
 import { round1 } from "@/lib/kcal";
-import { Button } from "@/components/ui/button";
 import { CatAvatar } from "@/components/cats/cat-avatar";
 import { WeightBadge } from "@/components/weight/weight-badge";
 import { CareChips } from "@/components/care/care-chips";
 import { CatWaterButton } from "@/components/dashboard/cat-water-button";
 import { FeedDialog } from "@/components/feed/feed-dialog";
+import { FoodBowl, WaterBowl } from "@/components/feed/feeding-bowls";
 import type { FeedData } from "@/components/feed/quick-feed";
-import { KcalBar } from "./kcal-bar";
 import { KcalSparkline } from "./kcal-sparkline";
 
 const t = {
   lastFed: "Last fed",
   noFeeds: "No feeds yet today",
   by: "by",
-  feed: "Feed",
   weight: "Weight",
   noWeight: "No weight logged",
   last7: "Last 7 days",
-  ofKcal: (target: number) => `of ${target} kcal`,
-  kcalToday: "kcal today",
+  kcal: "kcal",
+  kcalOver: "kcal · over",
+  ml: "ml",
+  mlFull: "ml · full ✓",
 } as const;
 
-/**
- * The cat's avatar wrapped in its daily-kcal progress arc (owner-picked
- * compact layout: the cat's face fills up as they eat through their day).
- */
-function AvatarKcalRing({
-  cat,
-  photoUrl,
-  fraction,
-}: {
-  cat: Cat;
-  photoUrl?: string;
-  /** 0..1 of today's target; 0 when no target. */
-  fraction: number;
-}) {
-  const SIZE = 54;
-  const STROKE = 3.5;
-  const R = (SIZE - STROKE) / 2;
-  const CIRC = 2 * Math.PI * R;
-  const accent = `hsl(var(--cat-${cat.accent_index}))`;
+/** A tappable feeding-station cell (a bowl + its numbers). */
+const CELL =
+  "flex flex-col items-center gap-1.5 rounded-2xl border border-border/70 bg-muted/40 px-2 py-3 text-center transition-colors hover:bg-muted/70 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-  return (
-    <span
-      className="relative grid flex-none place-items-center"
-      style={{ width: SIZE, height: SIZE }}
-    >
-      <svg
-        width={SIZE}
-        height={SIZE}
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="absolute inset-0"
-        aria-hidden
-      >
-        <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={R}
-          fill="none"
-          strokeWidth={STROKE}
-          className="stroke-muted"
-        />
-        {fraction > 0 && (
-          <circle
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={R}
-            fill="none"
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            stroke={accent}
-            strokeDasharray={CIRC}
-            strokeDashoffset={CIRC * (1 - Math.min(fraction, 1))}
-            transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
-            style={{ transition: "stroke-dashoffset 500ms ease" }}
-          />
-        )}
-      </svg>
-      <CatAvatar cat={cat} url={photoUrl} size={44} />
-    </span>
-  );
+/** A cat-mood line derived from how close they are to their kcal target. */
+function moodLabel(fraction: number, hasTarget: boolean): string {
+  if (!hasTarget) return "";
+  if (fraction <= 0) return "hungry — not fed yet";
+  if (fraction > 1) return "over target — treat day 🐾";
+  if (fraction >= 0.85) return "nearly there";
+  if (fraction < 0.3) return "just getting started";
+  return "on track";
 }
 
 export type CatCardData = {
@@ -108,10 +61,11 @@ export type CatCardData = {
 };
 
 /**
- * One cat's Today card (SPEC §7): the kcal ring is the focal point; everything
- * else stays quiet. Subtly tinted with the cat's accent. Server Component — all
- * data is computed by the page and passed in; only the small water widget and
- * care chips are interactive (client) children.
+ * One cat's Today card (SPEC §7). The focal point is the feeding station: a
+ * matched pair of bowls (food in the cat's coat colour, water in blue) that
+ * fill through the day and double as the feed / water log buttons. Server
+ * Component — all data is computed by the page; only the bowls' dialogs are
+ * interactive (client) children.
  */
 export function CatCard({
   cat,
@@ -132,6 +86,21 @@ export function CatCard({
     "--cat-accent": `var(--cat-${cat.accent_index})`,
   } as CSSProperties;
 
+  const hasTarget = target != null && target > 0;
+  const foodFraction = hasTarget ? kcal / (target as number) : 0;
+  const foodOver = hasTarget && kcal > (target as number);
+
+  // Daily water goal ≈ 50 ml/kg (BREED_REF); needs a weight to compute.
+  const waterGoal = latestWeight
+    ? Math.round(
+        (latestWeight.weight_grams / 1000) * BREED_REF.waterMlPerKgPerDay,
+      )
+    : null;
+  const waterFraction = waterGoal ? waterMl / waterGoal : 0;
+  const waterFull = waterGoal != null && waterMl >= waterGoal;
+
+  const mood = moodLabel(foodFraction, hasTarget);
+
   return (
     <section
       style={accentStyle}
@@ -141,45 +110,91 @@ export function CatCard({
       <div className="h-1 w-full bg-cat/70" />
 
       <div className="space-y-3 p-4">
-        {/* Header → profile. The kcal readout lives HERE (owner-picked compact
-            layout): progress arc around the avatar + numbers on the right. */}
-        <Link
-          href={`/cats/${cat.id}`}
-          className="group flex items-center gap-3"
-        >
-          <AvatarKcalRing
-            cat={cat}
-            photoUrl={photoUrl}
-            fraction={target != null && target > 0 ? kcal / target : 0}
-          />
+        {/* Header → profile. Identity only; the numbers live under the bowls. */}
+        <Link href={`/cats/${cat.id}`} className="group flex items-center gap-3">
+          <CatAvatar cat={cat} url={photoUrl} size={44} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-lg font-bold text-foreground">
               {cat.name}
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              {cat.breed}
-            </span>
-          </span>
-          <span className="shrink-0 text-right">
-            <span
-              className="block text-xl font-bold leading-tight tabular-nums"
-              style={{ color: `hsl(var(--cat-${cat.accent_index}))` }}
-            >
-              {round1(kcal)}
-            </span>
-            <span className="block text-[11px] font-medium text-muted-foreground">
-              {target != null && target > 0 ? t.ofKcal(target) : t.kcalToday}
+              {mood || cat.breed}
             </span>
           </span>
         </Link>
 
-        {/* Thin daily progress bar (replaces the big ring) */}
-        <KcalBar
-          kcal={kcal}
-          target={target}
-          accentIndex={cat.accent_index}
-          treat={treat}
-        />
+        {/* Feeding station: tap the food bowl to feed, the water bowl to log
+            water. Bowls fill toward each day's target. */}
+        <div className="grid grid-cols-2 gap-2">
+          <FeedDialog
+            {...feedData}
+            initialCatId={cat.id}
+            trigger={
+              <button type="button" className={CELL} aria-label={`Feed ${cat.name}`}>
+                <FoodBowl
+                  id={`${cat.id}-food`}
+                  accentIndex={cat.accent_index}
+                  fraction={foodFraction}
+                  treat={treat}
+                  width={104}
+                  title={`${cat.name} food bowl`}
+                />
+                <span className="leading-tight">
+                  <span className="text-sm font-extrabold tabular-nums text-foreground">
+                    {round1(kcal)}
+                  </span>
+                  {hasTarget && (
+                    <span className="text-[11px] font-bold text-muted-foreground">
+                      {" "}
+                      / {target}
+                    </span>
+                  )}
+                  <span
+                    className={`block text-[10px] font-bold uppercase tracking-wide ${
+                      foodOver ? "text-warning-strong" : "text-muted-foreground"
+                    }`}
+                  >
+                    {foodOver ? t.kcalOver : t.kcal}
+                  </span>
+                </span>
+              </button>
+            }
+          />
+
+          <CatWaterButton
+            cat={cat}
+            waterMl={waterMl}
+            triggerClassName={CELL}
+            trigger={
+              <>
+                <WaterBowl
+                  id={`${cat.id}-water`}
+                  fraction={waterFraction}
+                  width={104}
+                  title={`${cat.name} water bowl`}
+                />
+                <span className="leading-tight">
+                  <span className="text-sm font-extrabold tabular-nums text-foreground">
+                    {waterMl}
+                  </span>
+                  {waterGoal != null && (
+                    <span className="text-[11px] font-bold text-muted-foreground">
+                      {" "}
+                      / {waterGoal}
+                    </span>
+                  )}
+                  <span
+                    className={`block text-[10px] font-bold uppercase tracking-wide ${
+                      waterFull ? "text-success" : "text-muted-foreground"
+                    }`}
+                  >
+                    {waterFull ? t.mlFull : t.ml}
+                  </span>
+                </span>
+              </>
+            }
+          />
+        </div>
 
         {/* 7-day trend */}
         <div className="space-y-1">
@@ -204,28 +219,6 @@ export function CatCard({
             t.noFeeds
           )}
         </p>
-
-        {/* One-tap feed (the daily action) + compact water summary.
-            Water logging stays in the FAB and the cat's Health tab. */}
-        <div className="flex items-center gap-3">
-          <FeedDialog
-            {...feedData}
-            initialCatId={cat.id}
-            trigger={
-              <Button
-                // Accents flip lightness by theme (dark in light mode, light
-                // in dark mode), so the button's text must flip too, or white
-                // washes out on the lightened dark-mode accents.
-                className="h-11 flex-1 bg-cat text-white hover:bg-cat/90 dark:text-background"
-                aria-label={`${t.feed} ${cat.name}`}
-              >
-                <Utensils aria-hidden />
-                {t.feed} {cat.name}
-              </Button>
-            }
-          />
-          <CatWaterButton cat={cat} waterMl={waterMl} />
-        </div>
 
         {/* Weight + trend */}
         <div className="flex items-center justify-between text-sm">

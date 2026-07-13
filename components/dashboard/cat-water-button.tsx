@@ -39,9 +39,15 @@ const t = {
 export function CatWaterButton({
   cat,
   waterMl,
+  trigger,
+  triggerClassName,
 }: {
   cat: Cat;
   waterMl: number;
+  /** Custom trigger content (e.g. the water bowl). Falls back to the pill. */
+  trigger?: React.ReactNode;
+  /** Class for the trigger button when `trigger` is provided. */
+  triggerClassName?: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -84,11 +90,18 @@ export function CatWaterButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-sm tabular-nums text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className={
+          triggerClassName ??
+          "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-sm tabular-nums text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        }
         aria-label={`Log water for ${cat.name}`}
       >
-        <Droplets className="h-4 w-4 text-cat" aria-hidden />
-        {waterMl} {t.today}
+        {trigger ?? (
+          <>
+            <Droplets className="h-4 w-4 text-cat" aria-hidden />
+            {waterMl} {t.today}
+          </>
+        )}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
