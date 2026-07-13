@@ -37,6 +37,8 @@ export type WaterQuickAddProps = {
   cats: Cat[];
   /** Preselect a cat in multi-cat mode. */
   catId?: string;
+  /** Called after a successful log (e.g. to refresh a today-list). */
+  onLogged?: () => void;
   className?: string;
 };
 
@@ -45,7 +47,12 @@ export type WaterQuickAddProps = {
  * §6.5). No daily-target math. Works standalone in the FAB (pass all cats) or on
  * a dashboard card (pass a single cat).
  */
-export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
+export function WaterQuickAdd({
+  cats,
+  catId,
+  onLogged,
+  className,
+}: WaterQuickAddProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = React.useTransition();
@@ -79,6 +86,7 @@ export function WaterQuickAdd({ cats, catId, className }: WaterQuickAddProps) {
         }
         toast({ title: t.saved(ml, name), variant: "success" });
         setCustom("");
+        onLogged?.();
         router.refresh();
       } finally {
         setPendingPreset(null);

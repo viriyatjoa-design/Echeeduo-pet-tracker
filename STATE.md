@@ -52,6 +52,15 @@ Build-side:
   the other tabs (a full lazy-tab refactor is out of scope; the lean query keeps it to ~3
   extra queries).
 
+## Session (2026-07-13 — quick water logging + delete)
+- [x] **Dashboard water is now a button** (owner-requested): the "N ml today" figure on each
+  cat card opens a per-cat water dialog — WaterQuickAdd presets for fast logging from the home
+  screen, plus a "Logged today" list with a delete (×) on each entry to undo a mis-log right
+  there. `CatWaterButton` + `getTodayWater`/`removeObservation` actions; WaterQuickAdd gained
+  an `onLogged` callback so the list refreshes.
+- [x] **Journal entries deletable**: water/litter/symptom rows get a confirm-gated delete
+  (`DeleteObservationButton` → `removeObservation` soft-delete) for older mis-logs.
+
 ## Hardening session (2026-07-12, evening — 5-track multi-agent)
 - [x] **Adversarial audit** (55-agent workflow, find→refute→fix): 20 verified findings fixed
   (0 critical, 5 major, 15 minor). Majors: deactivated-cat care leak (getOpenCareEvents inner-

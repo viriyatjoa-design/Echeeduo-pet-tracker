@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { Droplets, Utensils } from "lucide-react";
+import { Utensils } from "lucide-react";
 import type { Cat, CareEvent, WeightLog } from "@/lib/types";
 import type { KcalPoint, LastFed } from "@/lib/feeding-queries";
 import type { WeightTrend } from "@/lib/weight";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CatAvatar } from "@/components/cats/cat-avatar";
 import { WeightBadge } from "@/components/weight/weight-badge";
 import { CareChips } from "@/components/care/care-chips";
+import { CatWaterButton } from "@/components/dashboard/cat-water-button";
 import { FeedDialog } from "@/components/feed/feed-dialog";
 import type { FeedData } from "@/components/feed/quick-feed";
 import { KcalBar } from "./kcal-bar";
@@ -21,7 +22,6 @@ const t = {
   noFeeds: "No feeds yet today",
   by: "by",
   feed: "Feed",
-  ml: "ml today",
   weight: "Weight",
   noWeight: "No weight logged",
   last7: "Last 7 days",
@@ -224,10 +224,7 @@ export function CatCard({
               </Button>
             }
           />
-          <span className="inline-flex shrink-0 items-center gap-1 text-sm tabular-nums text-muted-foreground">
-            <Droplets className="h-4 w-4 text-cat" aria-hidden />
-            {waterMl} {t.ml}
-          </span>
+          <CatWaterButton cat={cat} waterMl={waterMl} />
         </div>
 
         {/* Weight + trend */}

@@ -17,6 +17,7 @@ import {
 import { LitterForm } from "@/components/observation/litter-form";
 import { LitterAnalysis } from "@/components/observation/litter-analysis";
 import { SymptomForm } from "@/components/observation/symptom-form";
+import { DeleteObservationButton } from "@/components/observation/delete-observation-button";
 
 const t = {
   title: "Journal",
@@ -153,9 +154,12 @@ async function JournalRow({
           />
         )}
 
-        <p className="text-xs text-muted-foreground">
-          {strings.common.by} {entry.by}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            {strings.common.by} {entry.by}
+          </p>
+          <DeleteObservationButton kind={entry.kind} id={entry.id} />
+        </div>
       </CardContent>
     </Card>
   );

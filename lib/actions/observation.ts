@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { getCurrentAppUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { todayInTz, addDaysToDate, APP_TZ } from "@/lib/time";
 import type { UUID } from "@/lib/types";
 
 /**
@@ -58,6 +59,66 @@ export async function logWater(input: {
 
     revalidateApp();
     return { ok: true, id: data.id as UUID };
+  } catch (err) {
+    return { ok: false, error: errMsg(err) };
+  }
+}
+
+/** 'YYYY-MM-DD' Jakarta day for a timestamptz ISO string. */
+function dayInTz(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+export type TodayWaterEntry = { id: UUID; ml: number; at: string };
+
+/** Today's (Jakarta) water logs for one cat, newest first — for the quick-log
+ * dialog's "undo a mis-log" list. Read action so the dialog fetches on open. */
+export async function getTodayWater(catId: string): Promise<TodayWaterEntry[]> {
+  const me = await getCurrentAppUser();
+  if (!me || !catId) return [];
+  const today = todayInTz();
+  const sinceIso = `${addDaysToDate(today, -1)}T00:00:00Z`;
+  const { data, error } = await db()
+    .from("water_logs")
+    .select("id, ml, logged_at")
+    .eq("cat_id", catId)
+    .eq("is_active", true)
+    .gte("logged_at", sinceIso)
+    .order("logged_at", { ascending: false });
+  if (error) return [];
+  return ((data ?? []) as { id: string; ml: number; logged_at: string }[])
+    .filter((r) => dayInTz(r.logged_at) === today)
+    .map((r) => ({ id: r.id as UUID, ml: r.ml, at: r.logged_at }));
+}
+
+/** Soft-delete a logged observation (SPEC §2.6: never hard-delete). Used to
+ * undo a wrong water/litter/symptom entry from the dashboard or journal. */
+export async function removeObservation(
+  kind: "water" | "litter" | "symptom",
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const me = await getCurrentAppUser();
+    if (!me) return { ok: false, error: "Unauthorized" };
+    if (!id) return { ok: false, error: "Missing id." };
+    const table =
+      kind === "water"
+        ? "water_logs"
+        : kind === "litter"
+          ? "litter_logs"
+          : "symptom_logs";
+    const { error } = await db()
+      .from(table)
+      .update({ is_active: false })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidateApp();
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: errMsg(err) };
   }
